@@ -593,31 +593,41 @@
   const pwConfirm   = document.getElementById("pwConfirm");
   const pwCancel    = document.getElementById("pwCancel");
 
-  let pwResolve = null;
-  function askPassword() {
-    return new Promise(resolve => {
-      pwResolve = resolve;
-      pwInput.value = "";
-      pwModal.classList.add("open");
-      setTimeout(() => pwInput.focus(), 50);
-    });
+  let pendingCard = null;
+  let pendingPost = null;
+
+  function openPwModal(card, post) {
+    pendingCard = card;
+    pendingPost = post;
+    pwInput.value = "";
+    pwModal.classList.add("open");
+    setTimeout(() => pwInput.focus(), 50);
   }
-  pwConfirm.addEventListener("click", () => {
-    if (!pwResolve) return;
-    const val = pwInput.value;
+  function closePwModal() {
     pwModal.classList.remove("open");
-    pwResolve(val);
-    pwResolve = null;
-  });
-  pwCancel.addEventListener("click", () => {
-    if (!pwResolve) return;
-    pwModal.classList.remove("open");
-    pwResolve(null);
-    pwResolve = null;
-  });
+    pendingCard = null;
+    pendingPost = null;
+  }
+  function confirmDelete() {
+    if (!pendingCard) return;
+    if (pwInput.value === "서현이최고") {
+      pendingCard.style.transition = "opacity 0.25s";
+      pendingCard.style.opacity = "0";
+      const c = pendingCard, p = pendingPost;
+      setTimeout(() => c.remove(), 250);
+      removeFromStorage(p.id);
+      closePwModal();
+    } else {
+      pwInput.value = "";
+      pwInput.placeholder = "틀렸습니다. 다시 입력";
+      pwInput.focus();
+    }
+  }
+  pwConfirm.addEventListener("click", confirmDelete);
+  pwCancel.addEventListener("click", closePwModal);
   pwInput.addEventListener("keydown", e => {
-    if (e.key === "Enter") pwConfirm.click();
-    if (e.key === "Escape") pwCancel.click();
+    if (e.key === "Enter")  confirmDelete();
+    if (e.key === "Escape") closePwModal();
   });
 
   /* ============================================================
@@ -966,23 +976,14 @@
     `;
 
     const delBtn = card.querySelector(".delete-btn");
-    delBtn.addEventListener("mousedown", e => e.stopPropagation());
-    delBtn.addEventListener("click", async e => {
+    delBtn.addEventListener("click", e => {
       e.stopPropagation();
-      const pw = await askPassword();
-      if (pw === null) return;
-      if (pw === "서현이최고") {
-        card.style.transition = "opacity 0.25s";
-        card.style.opacity = "0";
-        setTimeout(() => card.remove(), 250);
-        removeFromStorage(post.id);
-      } else {
-        showToast("❌ 비밀번호가 틀렸습니다.");
-      }
+      e.preventDefault();
+      openPwModal(card, post);
     });
 
-    card.addEventListener("mousedown",  e => startDrag(e, card));
-    card.addEventListener("touchstart", e => startDrag(e, card), { passive: false });
+    card.addEventListener("mousedown",  e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); });
+    card.addEventListener("touchstart", e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); }, { passive: false });
     return card;
   }
 
