@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMILE &amp; SHARE — 웃어라, 세상이 너와 함께 웃을 것이다</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Space+Grotesk:wght@400;700;900&family=Noto+Sans+KR:wght@700;900&display=swap" rel="stylesheet">
+  <style>
+    /* ===== RESET ===== */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --black:  #0D0D0D;
+      --white:  #FAFAF0;
+      --yellow: #FFE500;
+      --red:    #FF1F1F;
+      --blue:   #0040FF;
+      --green:  #00D44B;
+      --border: 3px solid var(--black);
+      --sh-sm:  3px 3px 0 var(--black);
+      --sh-md:  5px 5px 0 var(--black);
+      --sh-lg:  8px 8px 0 var(--black);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--white);
+      font-family: 'Space Grotesk', 'Noto Sans KR', sans-serif;
+      color: var(--black);
+      min-height: 100vh;
+    }
+
+    /* ===== HEADER ===== */
+    header {
+      background: var(--yellow);
+      border-bottom: var(--border);
+      height: 64px;
+      padding: 0 40px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.2rem;
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+
+    .logo span {
+      display: inline-block;
+      background: var(--black);
+      color: var(--yellow);
+      padding: 0 6px;
+      margin-left: 4px;
+    }
+
+    .header-tag {
+      font-size: 0.62rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      max-width: 190px;
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    /* ===== CAPTURE SECTION ===== */
+    .capture-section {
+      padding: 56px 20px 48px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      border-bottom: var(--border);
+    }
+
+    .section-heading {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(2.8rem, 7vw, 5rem);
+      letter-spacing: 6px;
+      text-align: center;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .section-sub {
+      font-size: 0.65rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 3px;
+      opacity: 0.45;
+      margin-bottom: 36px;
+    }
+
+    /* Camera */
+    .webcam-wrap {
+      position: relative;
+      width: min(480px, 100%);
+      border: var(--border);
+      box-shadow: var(--sh-lg);
+      background: #111;
+      overflow: hidden;
+    }
+
+    #webcam {
+      display: block;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+
+    #canvas { display: none; }
+
+    .flash-layer {
+      position: absolute;
+      inset: 0;
+      background: #fff;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.06s;
+    }
+    .flash-layer.pop { opacity: 1; }
+
+    /* Smile badge */
+    .smile-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      padding: 5px 12px;
+      border: 2px solid var(--black);
+      font-size: 0.65rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      background: var(--red);
+      color: #fff;
+      transition: background 0.15s, color 0.15s;
+      user-select: none;
+    }
+    .smile-badge.on {
+      background: var(--green);
+      color: var(--black);
+    }
+
+    /* Meter */
+    .meter-wrap {
+      width: min(480px, 100%);
+      margin-top: 12px;
+    }
+
+    .meter-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.62rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 6px;
+    }
+
+    .meter-track {
+      height: 22px;
+      background: #dedad4;
+      border: var(--border);
+      box-shadow: var(--sh-sm);
+      overflow: hidden;
+    }
+
+    .meter-fill {
+      height: 100%;
+      width: 0%;
+      background: var(--red);
+      transition: width 0.08s linear, background 0.15s;
+    }
+    .meter-fill.on { background: var(--green); }
+
+    /* Capture button */
+    #captureBtn {
+      margin-top: 28px;
+      padding: 18px 52px;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2.2rem;
+      letter-spacing: 5px;
+      background: var(--yellow);
+      color: var(--black);
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+      user-select: none;
+    }
+
+    #captureBtn:disabled {
+      background: #d4d0c8;
+      cursor: not-allowed;
+      box-shadow: var(--sh-sm);
+    }
+
+    #captureBtn:not(:disabled):hover {
+      transform: translate(-3px, -3px);
+      box-shadow: 8px 8px 0 var(--black);
+    }
+
+    #captureBtn:not(:disabled):active {
+      transform: translate(3px, 3px);
+      box-shadow: 2px 2px 0 var(--black);
+    }
+
+    #initMsg {
+      margin-top: 16px;
+      font-size: 0.62rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.4;
+      text-align: center;
+    }
+
+    /* ===== MODAL ===== */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.78);
+      z-index: 200;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-bg.open { display: flex; }
+
+    .modal-box {
+      background: var(--white);
+      border: var(--border);
+      box-shadow: var(--sh-lg);
+      padding: 28px;
+      width: 100%;
+      max-width: 500px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+
+    .modal-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 2rem;
+      letter-spacing: 3px;
+      margin-bottom: 16px;
+    }
+
+    #previewImg {
+      width: 100%;
+      display: block;
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      margin-bottom: 16px;
+    }
+
+    #postText {
+      width: 100%;
+      padding: 14px;
+      font-family: 'Space Grotesk', 'Noto Sans KR', sans-serif;
+      font-size: 1rem;
+      font-weight: 700;
+      border: var(--border);
+      box-shadow: var(--sh-sm);
+      background: var(--white);
+      resize: vertical;
+      min-height: 88px;
+      outline: none;
+      line-height: 1.5;
+      margin-bottom: 6px;
+    }
+    #postText:focus { outline: 3px solid var(--blue); }
+
+    .char-row {
+      font-size: 0.6rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.4;
+      text-align: right;
+      margin-bottom: 16px;
+    }
+
+    .modal-actions { display: flex; gap: 12px; }
+
+    #shareBtn {
+      flex: 1;
+      padding: 14px;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.6rem;
+      letter-spacing: 3px;
+      background: var(--blue);
+      color: #fff;
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      cursor: pointer;
+      transition: transform 0.08s, box-shadow 0.08s;
+    }
+    #shareBtn:hover:not(:disabled) { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--black); }
+    #shareBtn:active:not(:disabled) { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--black); }
+    #shareBtn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    #cancelBtn {
+      padding: 14px 18px;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.6rem;
+      letter-spacing: 3px;
+      background: var(--white);
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      cursor: pointer;
+      transition: background 0.1s, color 0.1s, transform 0.08s, box-shadow 0.08s;
+    }
+    #cancelBtn:hover { background: var(--red); color: #fff; transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--black); }
+
+    /* ===== FEED ===== */
+    .feed-section {
+      padding: 48px 24px 96px;
+    }
+
+    .feed-header {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-bottom: 32px;
+    }
+
+    .feed-title {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(2.2rem, 5vw, 3.5rem);
+      letter-spacing: 4px;
+      line-height: 1;
+    }
+
+    .feed-count {
+      background: var(--red);
+      color: #fff;
+      border: var(--border);
+      box-shadow: var(--sh-sm);
+      padding: 4px 14px;
+      font-size: 0.9rem;
+      font-weight: 900;
+      letter-spacing: 1px;
+      min-width: 44px;
+      text-align: center;
+    }
+
+    #feedGrid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+      gap: 20px;
+    }
+
+    /* Card */
+    .post-card {
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      background: var(--white);
+      overflow: hidden;
+      animation: cardIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .post-card img {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      object-fit: cover;
+      display: block;
+      border-bottom: var(--border);
+    }
+
+    .post-body {
+      padding: 14px 16px;
+    }
+
+    .post-text {
+      font-size: 0.95rem;
+      font-weight: 700;
+      line-height: 1.45;
+      word-break: break-word;
+      margin-bottom: 10px;
+    }
+
+    .post-meta {
+      font-size: 0.58rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      opacity: 0.38;
+    }
+
+    /* Empty / loading states */
+    .feed-empty {
+      grid-column: 1 / -1;
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      background: var(--yellow);
+      padding: 64px 32px;
+      text-align: center;
+    }
+    .feed-empty p {
+      font-family: 'Bebas Neue', cursive;
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      letter-spacing: 4px;
+      line-height: 1.5;
+    }
+
+    .feed-loading {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 64px;
+      font-family: 'Bebas Neue', cursive;
+      font-size: 1.2rem;
+      letter-spacing: 3px;
+      opacity: 0.28;
+    }
+
+    /* ===== TOAST ===== */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      left: 50%;
+      transform: translateX(-50%) translateY(12px);
+      background: var(--black);
+      color: var(--yellow);
+      border: var(--border);
+      box-shadow: var(--sh-md);
+      padding: 12px 26px;
+      font-size: 0.72rem;
+      font-weight: 900;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      z-index: 500;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ===== RESPONSIVE ===== */
+    @media (max-width: 520px) {
+      header { padding: 0 16px; }
+      .header-tag { display: none; }
+      .capture-section { padding: 32px 16px; }
+      .feed-section { padding: 32px 16px 72px; }
+      #captureBtn { font-size: 1.6rem; padding: 16px 32px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header>
+  <div class="logo">SMILE<span>&amp;</span>SHARE</div>
+  <div class="header-tag">웃어라, 세상이<br>너와 함께 웃을 것이다</div>
+</header>
+
+<!-- ===== CAPTURE SECTION ===== -->
+<section class="capture-section">
+  <h1 class="section-heading">웃어야만 찍힌다</h1>
+  <p class="section-sub">Real-time smile detection · camera required</p>
+
+  <div class="webcam-wrap">
+    <video id="webcam" autoplay playsinline muted></video>
+    <div class="flash-layer" id="flashLayer"></div>
+    <div class="smile-badge" id="smileBadge">● NOT SMILING</div>
+  </div>
+
+  <canvas id="canvas"></canvas>
+
+  <div class="meter-wrap">
+    <div class="meter-row">
+      <span>SMILE METER</span>
+      <span id="smilePct">0%</span>
+    </div>
+    <div class="meter-track">
+      <div class="meter-fill" id="meterFill"></div>
+    </div>
+  </div>
+
+  <button id="captureBtn" disabled>📸 CAPTURE YOUR SMILE</button>
+  <p id="initMsg">Initializing face detection…</p>
+</section>
+
+<!-- ===== MODAL ===== -->
+<div class="modal-bg" id="modalBg">
+  <div class="modal-box">
+    <p class="modal-title">📸 Share Your Smile</p>
+    <img id="previewImg" alt="Your captured smile" />
+    <textarea
+      id="postText"
+      placeholder="이 순간이 좋은 이유… (최대 140자)"
+      maxlength="140"
+    ></textarea>
+    <p class="char-row"><span id="charLeft">140</span> chars left</p>
+    <div class="modal-actions">
+      <button id="shareBtn">SHARE IT →</button>
+      <button id="cancelBtn">CANCEL</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== FEED ===== -->
+<section class="feed-section">
+  <div class="feed-header">
+    <h2 class="feed-title">SMILES FROM THE WORLD</h2>
+    <span class="feed-count" id="postCount">0</span>
+  </div>
+  <div id="feedGrid">
+    <div class="feed-loading">Loading smiles…</div>
+  </div>
+</section>
+
+<!-- ===== TOAST ===== -->
+<div id="toast"></div>
+
+<!-- ===== SCRIPT ===== -->
+<script type="module">
+  /* ============================================================
+   * CONFIGURATION
+   *
+   * To enable cross-device sharing via Supabase:
+   *   1. Create a Supabase project at https://supabase.com
+   *   2. Run this SQL to create the posts table:
+   *        create table posts (
+   *          id uuid default uuid_generate_v4() primary key,
+   *          image text not null,
+   *          text  text not null,
+   *          created_at timestamptz default now()
+   *        );
+   *        alter table posts enable row level security;
+   *        create policy "anyone can read"  on posts for select using (true);
+   *        create policy "anyone can write" on posts for insert with check (true);
+   *   3. Fill in your Project URL and anon key below.
+   *
+   * Leave both empty → single-browser mode (localStorage).
+   * ============================================================ */
+  const SUPABASE_URL      = "";
+  const SUPABASE_ANON_KEY = "";
+
+  /* ============================================================
+   * MEDIAPIPE IMPORT (CDN)
+   * ============================================================ */
+  import { FaceLandmarker, FilesetResolver }
+    from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.mjs";
+
+  /* ============================================================
+   * CONSTANTS
+   * ============================================================ */
+  const SMILE_THRESHOLD = 0.42; // avg of mouthSmileLeft + mouthSmileRight
+  const LS_KEY          = "smile_share_v1";
+  const MAX_LOCAL       = 50;
+  const USE_SUPABASE    = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+  /* ============================================================
+   * DOM REFS
+   * ============================================================ */
+  const webcamEl    = document.getElementById("webcam");
+  const canvasEl    = document.getElementById("canvas");
+  const captureBtn  = document.getElementById("captureBtn");
+  const initMsg     = document.getElementById("initMsg");
+  const smileBadge  = document.getElementById("smileBadge");
+  const meterFill   = document.getElementById("meterFill");
+  const smilePct    = document.getElementById("smilePct");
+  const flashLayer  = document.getElementById("flashLayer");
+  const modalBg     = document.getElementById("modalBg");
+  const previewImg  = document.getElementById("previewImg");
+  const postText    = document.getElementById("postText");
+  const charLeft    = document.getElementById("charLeft");
+  const shareBtn    = document.getElementById("shareBtn");
+  const cancelBtn   = document.getElementById("cancelBtn");
+  const feedGrid    = document.getElementById("feedGrid");
+  const postCount   = document.getElementById("postCount");
+  const toastEl     = document.getElementById("toast");
+
+  /* ============================================================
+   * STATE
+   * ============================================================ */
+  let faceLandmarker = null;
+  let smileScore     = 0;
+  let isSmiling      = false;
+  let capturedUrl    = null;
+  let lastVideoTime  = -1;
+  let toastTimer     = null;
+  let sbClient       = null;
+
+  /* ============================================================
+   * WEBCAM
+   * ============================================================ */
+  async function startWebcam() {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 480 }, facingMode: "user" }
+      });
+      webcamEl.srcObject = stream;
+      await new Promise(res => { webcamEl.onloadedmetadata = res; });
+      webcamEl.play();
+      initMediaPipe();
+    } catch (e) {
+      initMsg.textContent = "카메라 접근 권한이 필요합니다. 브라우저 설정을 확인해 주세요.";
+      console.error("Webcam:", e);
+    }
+  }
+
+  /* ============================================================
+   * MEDIAPIPE
+   * ============================================================ */
+  async function initMediaPipe() {
+    try {
+      initMsg.textContent = "Face detection model loading… (첫 로드는 잠깐 걸릴 수 있어요)";
+      const resolver = await FilesetResolver.forVisionTasks(
+        "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
+      );
+      faceLandmarker = await FaceLandmarker.createFromOptions(resolver, {
+        baseOptions: {
+          modelAssetPath:
+            "https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task",
+          delegate: "GPU"
+        },
+        outputFaceBlendshapes: true,
+        runningMode: "VIDEO",
+        numFaces: 1
+      });
+      initMsg.textContent = "Ready — 이제 웃어보세요! 😄";
+      requestAnimationFrame(detectLoop);
+    } catch (e) {
+      initMsg.textContent = "Face detection 실패. Chromium 기반 브라우저를 사용해 주세요.";
+      console.error("MediaPipe:", e);
+    }
+  }
+
+  /* ============================================================
+   * DETECTION LOOP
+   * ============================================================ */
+  function detectLoop() {
+    if (faceLandmarker && !webcamEl.paused && webcamEl.readyState >= 2) {
+      const now = performance.now();
+      if (webcamEl.currentTime !== lastVideoTime) {
+        lastVideoTime = webcamEl.currentTime;
+        const result = faceLandmarker.detectForVideo(webcamEl, now);
+        processBlendshapes(result);
+      }
+    }
+    requestAnimationFrame(detectLoop);
+  }
+
+  function processBlendshapes(result) {
+    if (result.faceBlendshapes?.length) {
+      const cats = result.faceBlendshapes[0].categories;
+      const L = cats.find(c => c.categoryName === "mouthSmileLeft")?.score  ?? 0;
+      const R = cats.find(c => c.categoryName === "mouthSmileRight")?.score ?? 0;
+      smileScore = (L + R) / 2;
+    } else {
+      smileScore = 0;
+    }
+    updateSmileUI();
+  }
+
+  function updateSmileUI() {
+    const pct = Math.round(smileScore * 100);
+    meterFill.style.width = pct + "%";
+    smilePct.textContent  = pct + "%";
+    isSmiling = smileScore >= SMILE_THRESHOLD;
+
+    if (isSmiling) {
+      meterFill.classList.add("on");
+      smileBadge.classList.add("on");
+      smileBadge.textContent   = "● SMILING!";
+      captureBtn.disabled      = false;
+    } else {
+      meterFill.classList.remove("on");
+      smileBadge.classList.remove("on");
+      smileBadge.textContent = "● NOT SMILING";
+      captureBtn.disabled    = true;
+    }
+  }
+
+  /* ============================================================
+   * CAPTURE
+   * ============================================================ */
+  captureBtn.addEventListener("click", () => {
+    if (!isSmiling) return;
+
+    // Flash
+    flashLayer.classList.add("pop");
+    setTimeout(() => flashLayer.classList.remove("pop"), 160);
+
+    // Draw to canvas (flip mirror → correct orientation)
+    canvasEl.width  = webcamEl.videoWidth;
+    canvasEl.height = webcamEl.videoHeight;
+    const ctx = canvasEl.getContext("2d");
+    ctx.save();
+    ctx.scale(-1, 1);
+    ctx.drawImage(webcamEl, -canvasEl.width, 0);
+    ctx.restore();
+
+    // Resize to max 480px wide for storage efficiency
+    const out = document.createElement("canvas");
+    const W   = Math.min(480, canvasEl.width);
+    const H   = Math.round((W / canvasEl.width) * canvasEl.height);
+    out.width  = W;
+    out.height = H;
+    out.getContext("2d").drawImage(canvasEl, 0, 0, W, H);
+    capturedUrl = out.toDataURL("image/jpeg", 0.75);
+
+    previewImg.src       = capturedUrl;
+    postText.value       = "";
+    charLeft.textContent = "140";
+    modalBg.classList.add("open");
+  });
+
+  /* ============================================================
+   * MODAL
+   * ============================================================ */
+  postText.addEventListener("input", () => {
+    charLeft.textContent = 140 - postText.value.length;
+  });
+
+  cancelBtn.addEventListener("click", closeModal);
+  modalBg.addEventListener("click", e => { if (e.target === modalBg) closeModal(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") closeModal(); });
+
+  function closeModal() {
+    modalBg.classList.remove("open");
+    capturedUrl = null;
+  }
+
+  shareBtn.addEventListener("click", async () => {
+    if (!capturedUrl) return;
+
+    const text = postText.value.trim() || "😄";
+    const post = {
+      id:         Date.now().toString(),
+      image:      capturedUrl,
+      text,
+      created_at: new Date().toISOString()
+    };
+
+    shareBtn.disabled    = true;
+    shareBtn.textContent = "SHARING…";
+
+    try {
+      if (USE_SUPABASE) {
+        await supabaseInsert(post);
+      } else {
+        localSave(post);
+      }
+      prependCard(post);
+      closeModal();
+      showToast("Your smile is live! 😄");
+    } catch (err) {
+      console.error(err);
+      showToast("공유 실패. 다시 시도해 주세요!");
+    } finally {
+      shareBtn.disabled    = false;
+      shareBtn.textContent = "SHARE IT →";
+    }
+  });
+
+  /* ============================================================
+   * LOCAL STORAGE
+   * ============================================================ */
+  function localSave(post) {
+    const all = localAll();
+    all.unshift(post);
+    try {
+      localStorage.setItem(LS_KEY, JSON.stringify(all.slice(0, MAX_LOCAL)));
+    } catch {
+      // Storage quota exceeded — keep only the 20 newest
+      localStorage.setItem(LS_KEY, JSON.stringify(all.slice(0, 20)));
+    }
+  }
+
+  function localAll() {
+    try { return JSON.parse(localStorage.getItem(LS_KEY) || "[]"); }
+    catch { return []; }
+  }
+
+  /* ============================================================
+   * SUPABASE (optional — loaded dynamically)
+   * ============================================================ */
+  async function initSupabase() {
+    await new Promise((res, rej) => {
+      const s   = document.createElement("script");
+      s.src     = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js";
+      s.onload  = res;
+      s.onerror = rej;
+      document.head.appendChild(s);
+    });
+    sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  }
+
+  async function supabaseInsert(post) {
+    if (!sbClient) throw new Error("Supabase not initialised");
+    const { error } = await sbClient.from("posts").insert({
+      image: post.image,
+      text:  post.text
+    });
+    if (error) throw error;
+  }
+
+  async function supabaseFetchAll() {
+    if (!sbClient) throw new Error("Supabase not initialised");
+    const { data, error } = await sbClient
+      .from("posts")
+      .select("id,image,text,created_at")
+      .order("created_at", { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    return data;
+  }
+
+  /* ============================================================
+   * FEED
+   * ============================================================ */
+  async function loadFeed() {
+    try {
+      const posts = USE_SUPABASE ? await supabaseFetchAll() : localAll();
+      feedGrid.innerHTML = "";
+      if (!posts.length) { renderEmpty(); return; }
+      postCount.textContent = posts.length;
+      posts.forEach(p => feedGrid.appendChild(makeCard(p)));
+    } catch (e) {
+      feedGrid.innerHTML = `<div class="feed-loading">피드 로드 실패 — 새로고침해 주세요.</div>`;
+      console.error(e);
+    }
+  }
+
+  function renderEmpty() {
+    feedGrid.innerHTML = `
+      <div class="feed-empty">
+        <p>아직 아무도 웃지 않았어요.<br>첫 번째가 되어보세요 →</p>
+      </div>
+    `;
+    postCount.textContent = "0";
+  }
+
+  function prependCard(post) {
+    const emptyEl = feedGrid.querySelector(".feed-empty");
+    if (emptyEl) feedGrid.innerHTML = "";
+
+    feedGrid.insertBefore(makeCard(post), feedGrid.firstChild);
+    postCount.textContent = parseInt(postCount.textContent || "0") + 1;
+  }
+
+  function makeCard(post) {
+    const card     = document.createElement("div");
+    card.className = "post-card";
+    const d        = new Date(post.created_at || Date.now());
+    const timeStr  = d.toLocaleString("ko-KR", {
+      month: "short", day: "numeric",
+      hour: "2-digit", minute: "2-digit"
+    });
+    card.innerHTML = `
+      <img src="${post.image}" alt="Smile post" loading="lazy" />
+      <div class="post-body">
+        <p class="post-text">${escHtml(post.text)}</p>
+        <span class="post-meta">${timeStr}</span>
+      </div>
+    `;
+    return card;
+  }
+
+  function escHtml(s) {
+    return s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
+  }
+
+  /* ============================================================
+   * TOAST
+   * ============================================================ */
+  function showToast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3500);
+  }
+
+  /* ============================================================
+   * BOOT
+   * ============================================================ */
+  async function boot() {
+    startWebcam();
+    if (USE_SUPABASE) {
+      try { await initSupabase(); }
+      catch (e) { console.warn("Supabase load failed:", e); }
+    }
+    loadFeed();
+  }
+
+  boot();
+</script>
+
+</body>
+</html>
