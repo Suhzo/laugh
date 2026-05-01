@@ -42,16 +42,16 @@
     /* ===== CAPTURE SECTION ===== */
     .capture-section {
       position: relative;
-      z-index: 100;
+      z-index: 9000;
       padding: 56px 20px 48px;
       display: flex;
       flex-direction: column;
       align-items: center;
     }
 
-    .webcam-wrap  { position: relative; z-index: 110; }
-    .meter-wrap   { position: relative; z-index: 110; }
-    #captureBtn   { position: relative; z-index: 110; }
+    .webcam-wrap  { position: relative; z-index: 9010; }
+    .meter-wrap   { position: relative; z-index: 9010; }
+    #captureBtn   { position: relative; z-index: 9010; }
 
     .section-heading {
       font-family: 'Bebas Neue', cursive;
@@ -656,23 +656,24 @@
     const H   = Math.round((W / canvasEl.width) * canvasEl.height);
     out.width  = W;
     out.height = H;
-    const outCtx = out.getContext("2d");
+    const outCtx = out.getContext("2d", { willReadFrequently: true });
     outCtx.drawImage(canvasEl, 0, 0, W, H);
 
     // Vintage B&W: desaturate + contrast boost + 20% grain noise
-    const imgData = outCtx.getImageData(0, 0, W, H);
-    const d = imgData.data;
-    for (let i = 0; i < d.length; i += 4) {
-      // Luminance-weighted grayscale
-      const gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
-      // Slight contrast boost (S-curve approximation)
-      const c = (gray - 128) * 1.15 + 128;
-      // Film grain noise ±20% of 255
-      const noise = (Math.random() - 0.5) * 0.4 * 255;
-      const v = Math.max(0, Math.min(255, c + noise));
-      d[i] = d[i+1] = d[i+2] = v;
+    try {
+      const imgData = outCtx.getImageData(0, 0, W, H);
+      const d = imgData.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const gray = d[i] * 0.299 + d[i+1] * 0.587 + d[i+2] * 0.114;
+        const c    = (gray - 128) * 1.15 + 128;
+        const noise = (Math.random() - 0.5) * 0.4 * 255;
+        const v    = Math.max(0, Math.min(255, c + noise));
+        d[i] = d[i+1] = d[i+2] = v;
+      }
+      outCtx.putImageData(imgData, 0, 0);
+    } catch(err) {
+      console.error("B&W filter failed:", err);
     }
-    outCtx.putImageData(imgData, 0, 0);
 
     capturedUrl = out.toDataURL("image/jpeg", 0.75);
 
@@ -819,7 +820,7 @@
 
   // UI 영역을 포함한 모든 장애물 반환
   function getObstacles(cardW, cardH) {
-    const pad = 18;
+    const pad = 60;   // generous margin around UI; accounts for card rotation bleed
     const obs = [];
 
     // 캡처 섹션 전체를 하나의 장애물로
@@ -831,11 +832,14 @@
                  isUI: true });
     }
 
-    // 기존 카드들
+    // 기존 카드들 — 회전 여유분을 포함한 확장 크기로 등록
+    const rot_bleed = 40; // extra pixels to cover ±20deg rotation footprint
     document.querySelectorAll(".post-card").forEach(c => {
-      obs.push({ x: parseFloat(c.style.left) || 0,
-                 y: parseFloat(c.style.top)  || 0,
-                 w: cardW, h: cardH, isUI: false });
+      const cx = parseFloat(c.style.left) || 0;
+      const cy = parseFloat(c.style.top)  || 0;
+      obs.push({ x: cx - rot_bleed, y: cy - rot_bleed,
+                 w: cardW + rot_bleed * 2, h: cardH + rot_bleed * 2,
+                 isUI: false });
     });
 
     return obs;
@@ -928,7 +932,7 @@
 
     const cw  = 210, ch = 210;
     const { x, y, drift } = findPosition(cw, ch);
-    const rot = (Math.random() - 0.5) * 80;
+    const rot = (Math.random() - 0.5) * 30;
 
     card.style.cssText = `left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;z-index:${z};--rot:${rot.toFixed(1)}deg;--drift-x:${drift ?? 0}px;`;
 
