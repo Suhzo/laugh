@@ -919,11 +919,20 @@
            a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
-  // 항상 화면 맨 아래에 배치, 겹치면 위로 밀기
+  // 항상 화면 맨 아래에 배치, 겹치면 위로 밀기 (캡처섹션도 장애물로 처리)
   function findPosition(cardW, cardH) {
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
-    const gap = 6;
+    const gap = 10;
+
+    // 캡처 섹션 장애물
+    const capEl = document.querySelector(".capture-section");
+    let capObs = null;
+    if (capEl) {
+      const r   = capEl.getBoundingClientRect();
+      const pad = 24;
+      capObs = { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 };
+    }
 
     // 기존 카드 위치 수집
     const cards = [];
@@ -935,21 +944,32 @@
       });
     });
 
-    for (let attempt = 0; attempt < 80; attempt++) {
-      // 화면 전체 너비에서 랜덤 x
+    // 모든 장애물 배열
+    const obstacles = capObs ? [capObs, ...cards] : cards;
+
+    for (let attempt = 0; attempt < 120; attempt++) {
       const x = Math.random() * Math.max(0, vw - cardW);
       let y = vh - cardH; // 항상 맨 아래에서 시작
 
-      // 겹치는 카드가 있으면 그 위로 밀기
-      for (let push = 0; push < 40 && y >= -cardH; push++) {
-        const hit = cards.find(c => rectsOverlap({ x, y, w: cardW, h: cardH }, c));
-        if (!hit) return { x, y, drift: 0 };
-        y = hit.y - cardH - gap;
+      let stuck = false;
+      for (let push = 0; push < 60; push++) {
+        const r   = { x, y, w: cardW, h: cardH };
+        const hit = obstacles.find(o => rectsOverlap(r, o));
+        if (!hit) { return { x, y, drift: 0 }; }
+        const newY = hit.y - cardH - gap;
+        if (newY < 0) { stuck = true; break; } // 이 x열은 화면 위로 넘어감 → 다른 x 시도
+        y = newY;
       }
+      if (stuck) continue;
     }
 
-    // 폴백
-    return { x: Math.random() * Math.max(0, vw - cardW), y: vh - cardH, drift: 0 };
+    // 폴백: 캡처섹션 바깥 양쪽 끝 하단
+    if (capObs) {
+      const rightX = capObs.x + capObs.w;
+      if (rightX + cardW <= vw) return { x: rightX, y: vh - cardH, drift: 0 };
+      if (capObs.x - cardW >= 0) return { x: capObs.x - cardW, y: vh - cardH, drift: 0 };
+    }
+    return { x: 0, y: vh - cardH, drift: 0 };
   }
   /* --------------------------- */
 
