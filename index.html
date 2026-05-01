@@ -312,24 +312,74 @@
       position: absolute;
       top: 6px;
       left: 6px;
-      width: 26px;
-      height: 26px;
+      width: 22px;
+      height: 22px;
       border-radius: 50%;
-      background: rgba(0,0,0,0.45);
+      background: none;
       border: none;
-      color: #fff;
-      font-size: 14px;
+      color: rgba(255,255,255,0.5);
+      font-size: 13px;
+      font-weight: bold;
       line-height: 1;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 1;
       z-index: 20;
       padding: 0;
-      transition: background 0.15s;
+      transition: color 0.15s;
     }
-    .delete-btn:hover { background: rgba(220,30,30,0.85); }
+    .delete-btn:hover { color: rgba(255,80,80,0.95); }
+
+    #pwModal {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.6);
+      z-index: 99999;
+      align-items: center;
+      justify-content: center;
+    }
+    #pwModal.open { display: flex; }
+    #pwModal .pw-box {
+      background: #1a1a1a;
+      border: 1px solid #444;
+      padding: 24px 20px 20px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 240px;
+    }
+    #pwModal .pw-box p {
+      color: #eee;
+      font-size: 13px;
+      margin: 0;
+      text-align: center;
+    }
+    #pwModal input {
+      background: #2a2a2a;
+      border: 1px solid #555;
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      outline: none;
+    }
+    #pwModal .pw-actions {
+      display: flex;
+      gap: 8px;
+    }
+    #pwModal button {
+      flex: 1;
+      padding: 8px;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    #pwModal #pwConfirm { background: #e53e3e; color: #fff; }
+    #pwModal #pwCancel  { background: #333; color: #aaa; }
 
     .post-card img {
       width: 100%;
@@ -469,6 +519,16 @@
   </div>
 </div>
 
+<div id="pwModal">
+  <div class="pw-box">
+    <p>🔐 비밀번호를 입력하세요</p>
+    <input id="pwInput" type="password" placeholder="비밀번호" />
+    <div class="pw-actions">
+      <button id="pwConfirm">삭제</button>
+      <button id="pwCancel">취소</button>
+    </div>
+  </div>
+</div>
 
 <!-- ===== TOAST ===== -->
 <div id="toast"></div>
@@ -528,6 +588,37 @@
   const shareBtn    = document.getElementById("shareBtn");
   const cancelBtn   = document.getElementById("cancelBtn");
   const toastEl     = document.getElementById("toast");
+  const pwModal     = document.getElementById("pwModal");
+  const pwInput     = document.getElementById("pwInput");
+  const pwConfirm   = document.getElementById("pwConfirm");
+  const pwCancel    = document.getElementById("pwCancel");
+
+  let pwResolve = null;
+  function askPassword() {
+    return new Promise(resolve => {
+      pwResolve = resolve;
+      pwInput.value = "";
+      pwModal.classList.add("open");
+      setTimeout(() => pwInput.focus(), 50);
+    });
+  }
+  pwConfirm.addEventListener("click", () => {
+    if (!pwResolve) return;
+    const val = pwInput.value;
+    pwModal.classList.remove("open");
+    pwResolve(val);
+    pwResolve = null;
+  });
+  pwCancel.addEventListener("click", () => {
+    if (!pwResolve) return;
+    pwModal.classList.remove("open");
+    pwResolve(null);
+    pwResolve = null;
+  });
+  pwInput.addEventListener("keydown", e => {
+    if (e.key === "Enter") pwConfirm.click();
+    if (e.key === "Escape") pwCancel.click();
+  });
 
   /* ============================================================
    * STATE
@@ -871,14 +962,14 @@
         <p class="post-text">${escHtml(post.text)}</p>
         <span class="post-meta">${timeStr}</span>
       </div>
-      <button class="delete-btn" title="삭제">❌</button>
+      <button class="delete-btn" title="삭제">✕</button>
     `;
 
     const delBtn = card.querySelector(".delete-btn");
     delBtn.addEventListener("mousedown", e => e.stopPropagation());
-    delBtn.addEventListener("click", e => {
+    delBtn.addEventListener("click", async e => {
       e.stopPropagation();
-      const pw = prompt("🔐 비밀번호를 입력하세요:");
+      const pw = await askPassword();
       if (pw === null) return;
       if (pw === "서현이최고") {
         card.style.transition = "opacity 0.25s";
@@ -886,7 +977,7 @@
         setTimeout(() => card.remove(), 250);
         removeFromStorage(post.id);
       } else {
-        alert("❌ 비밀번호가 틀렸습니다.");
+        showToast("❌ 비밀번호가 틀렸습니다.");
       }
     });
 
