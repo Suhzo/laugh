@@ -310,26 +310,25 @@
 
     .delete-btn {
       position: absolute;
-      top: 7px;
-      right: 7px;
-      width: 22px;
-      height: 22px;
+      top: 6px;
+      left: 6px;
+      width: 26px;
+      height: 26px;
       border-radius: 50%;
-      background: rgba(0,0,0,0.5);
+      background: rgba(0,0,0,0.45);
       border: none;
       color: #fff;
-      font-size: 13px;
+      font-size: 14px;
       line-height: 1;
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      opacity: 0;
-      transition: opacity 0.15s, background 0.15s;
+      opacity: 1;
       z-index: 20;
       padding: 0;
+      transition: background 0.15s;
     }
-    .post-card:hover .delete-btn { opacity: 1; }
     .delete-btn:hover { background: rgba(220,30,30,0.85); }
 
     .post-card img {
@@ -337,6 +336,7 @@
       aspect-ratio: 1 / 1;
       object-fit: cover;
       display: block;
+      filter: grayscale(1) contrast(1.12);
     }
 
     .post-body {
@@ -818,111 +818,37 @@
            a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
-  // UI 영역을 포함한 모든 장애물 반환
-  function getObstacles(cardW, cardH) {
-    const pad = 60;   // generous margin around UI; accounts for card rotation bleed
-    const obs = [];
+  // 항상 화면 맨 아래에 배치, 겹치면 위로 밀기
+  function findPosition(cardW, cardH) {
+    const vw  = window.innerWidth;
+    const vh  = window.innerHeight;
+    const gap = 6;
 
-    // 캡처 섹션 전체를 하나의 장애물로
-    const capEl = document.querySelector(".capture-section");
-    if (capEl) {
-      const r = capEl.getBoundingClientRect();
-      obs.push({ x: r.left - pad, y: r.top - pad,
-                 w: r.width + pad * 2, h: r.height + pad * 2,
-                 isUI: true });
-    }
-
-    // 기존 카드들 — 회전 여유분을 포함한 확장 크기로 등록
-    const rot_bleed = 40; // extra pixels to cover ±20deg rotation footprint
+    // 기존 카드 위치 수집
+    const cards = [];
     document.querySelectorAll(".post-card").forEach(c => {
-      const cx = parseFloat(c.style.left) || 0;
-      const cy = parseFloat(c.style.top)  || 0;
-      obs.push({ x: cx - rot_bleed, y: cy - rot_bleed,
-                 w: cardW + rot_bleed * 2, h: cardH + rot_bleed * 2,
-                 isUI: false });
+      cards.push({
+        x: parseFloat(c.style.left) || 0,
+        y: parseFloat(c.style.top)  || 0,
+        w: cardW, h: cardH
+      });
     });
 
-    return obs;
-  }
+    for (let attempt = 0; attempt < 80; attempt++) {
+      // 화면 전체 너비에서 랜덤 x
+      const x = Math.random() * Math.max(0, vw - cardW);
+      let y = vh - cardH; // 항상 맨 아래에서 시작
 
-  // UI를 피하는 유효 존(zone) 목록 생성
-  function buildZones(cardW, cardH, cap) {
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const pad = 18;
-    const zones = [];
-
-    if (cap) {
-      const cL = cap.x + pad;            // capture 실제 left
-      const cR = cap.x + cap.w - pad;    // capture 실제 right
-      const cB = cap.y + cap.h - pad;    // capture 실제 bottom
-
-      // 하단 존 (capture 아래)
-      if (vh - cB > cardH) {
-        zones.push({ x0: 0, x1: vw - cardW, y0: cB, y1: vh - cardH, drift: 0 });
-      }
-      // 좌측 존
-      if (cL > cardW) {
-        zones.push({ x0: 0, x1: cL - cardW, y0: 0, y1: vh - cardH, drift: 40 });
-      }
-      // 우측 존
-      if (vw - cR > cardW) {
-        zones.push({ x0: cR, x1: vw - cardW, y0: 0, y1: vh - cardH, drift: -40 });
+      // 겹치는 카드가 있으면 그 위로 밀기
+      for (let push = 0; push < 40 && y >= -cardH; push++) {
+        const hit = cards.find(c => rectsOverlap({ x, y, w: cardW, h: cardH }, c));
+        if (!hit) return { x, y, drift: 0 };
+        y = hit.y - cardH - gap;
       }
     }
 
-    // 존이 없으면(작은 화면) 전체 하단 폴백
-    if (!zones.length) {
-      zones.push({ x0: 0, x1: Math.max(0, vw - cardW), y0: 0, y1: vh - cardH, drift: 0 });
-    }
-
-    return zones;
-  }
-
-  function findPosition(cardW, cardH) {
-    const vh  = window.innerHeight;
-    const gap = 12;
-
-    const obstacles = getObstacles(cardW, cardH);
-    const capObs    = obstacles.find(o => o.isUI);
-    const cardObs   = obstacles.filter(o => !o.isUI);
-    const zones     = buildZones(cardW, cardH, capObs);
-
-    for (const zone of zones) {
-      if (zone.x1 < zone.x0 || zone.y1 < zone.y0) continue;
-
-      // 같은 존 안에서 충돌 없는 자리 탐색
-      for (let attempt = 0; attempt < 30; attempt++) {
-        const x = zone.x0 + Math.random() * (zone.x1 - zone.x0);
-        // 아래 쪽에 bias
-        const y = zone.y0 + Math.pow(Math.random(), 0.35) * (zone.y1 - zone.y0);
-
-        const rect = { x, y, w: cardW, h: cardH };
-        if (!cardObs.some(c => rectsOverlap(rect, c))) {
-          return { x, y, drift: zone.drift };
-        }
-      }
-
-      // 랜덤 실패시 체계적 탐색: X 고정, Y를 아래부터 위로
-      for (let xi = 0; xi < 8; xi++) {
-        const x = zone.x0 + (xi / 7) * (zone.x1 - zone.x0);
-        let y = zone.y1;
-
-        for (let push = 0; push < 25; push++) {
-          const rect = { x, y, w: cardW, h: cardH };
-          const hit = cardObs.find(c => rectsOverlap(rect, c));
-          if (!hit) return { x, y, drift: zone.drift };
-          y = Math.max(zone.y0, hit.y - cardH - gap);
-          if (y <= zone.y0) break;
-        }
-      }
-    }
-
-    // 절대 폴백: 하단 좌우 끝
-    const fallbackX = capObs
-      ? (capObs.x + capObs.w < window.innerWidth - cardW ? capObs.x + capObs.w : 0)
-      : 0;
-    return { x: fallbackX, y: Math.max(0, vh - cardH), drift: 0 };
+    // 폴백
+    return { x: Math.random() * Math.max(0, vw - cardW), y: vh - cardH, drift: 0 };
   }
   /* --------------------------- */
 
@@ -945,11 +871,7 @@
         <p class="post-text">${escHtml(post.text)}</p>
         <span class="post-meta">${timeStr}</span>
       </div>
-      <button class="delete-btn" title="삭제">
-        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
-        </svg>
-      </button>
+      <button class="delete-btn" title="삭제">❌</button>
     `;
 
     const delBtn = card.querySelector(".delete-btn");
