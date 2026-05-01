@@ -919,7 +919,6 @@
            a.y < b.y + b.h && a.y + a.h > b.y;
   }
 
-  // 항상 화면 맨 아래에 배치, 겹치면 위로 밀기 (캡처섹션도 장애물로 처리)
   function findPosition(cardW, cardH) {
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
@@ -927,49 +926,60 @@
 
     // 캡처 섹션 장애물
     const capEl = document.querySelector(".capture-section");
-    let capObs = null;
+    let capObs  = null;
     if (capEl) {
-      const r   = capEl.getBoundingClientRect();
-      const pad = 24;
-      capObs = { x: r.left - pad, y: r.top - pad, w: r.width + pad * 2, h: r.height + pad * 2 };
+      const r  = capEl.getBoundingClientRect();
+      const pad = 20;
+      capObs = { x: r.left - pad, y: r.top - pad, w: r.width + pad*2, h: r.height + pad*2 };
     }
 
-    // 기존 카드 위치 수집
-    const cards = [];
+    // 기존 카드들
+    const placed = [];
     document.querySelectorAll(".post-card").forEach(c => {
-      cards.push({
-        x: parseFloat(c.style.left) || 0,
-        y: parseFloat(c.style.top)  || 0,
-        w: cardW, h: cardH
-      });
+      placed.push({ x: parseFloat(c.style.left)||0, y: parseFloat(c.style.top)||0, w: cardW, h: cardH });
     });
 
-    // 모든 장애물 배열
-    const obstacles = capObs ? [capObs, ...cards] : cards;
-
-    for (let attempt = 0; attempt < 120; attempt++) {
-      const x = Math.random() * Math.max(0, vw - cardW);
-      let y = vh - cardH; // 항상 맨 아래에서 시작
-
-      let stuck = false;
-      for (let push = 0; push < 60; push++) {
-        const r   = { x, y, w: cardW, h: cardH };
-        const hit = obstacles.find(o => rectsOverlap(r, o));
-        if (!hit) { return { x, y, drift: 0 }; }
-        const newY = hit.y - cardH - gap;
-        if (newY < 0) { stuck = true; break; } // 이 x열은 화면 위로 넘어감 → 다른 x 시도
-        y = newY;
+    // x 위치를 받아 충돌없는 y를 반환, 불가능하면 null
+    function tryX(x) {
+      let y = vh - cardH;
+      for (let i = 0; i < 80; i++) {
+        const r = { x, y, w: cardW, h: cardH };
+        // 캡처 섹션과 겹치면 그 위로 올리기
+        if (capObs && rectsOverlap(r, capObs)) {
+          y = capObs.y - cardH - gap;
+          if (y < 0) return null;
+          continue;
+        }
+        // 기존 카드와 겹치면 그 위로 올리기
+        const hit = placed.find(p => rectsOverlap(r, p));
+        if (!hit) return y;
+        y = hit.y - cardH - gap;
+        if (y < 0) return null;
       }
-      if (stuck) continue;
+      return null;
     }
 
-    // 폴백: 캡처섹션 바깥 양쪽 끝 하단
-    if (capObs) {
-      const rightX = capObs.x + capObs.w;
-      if (rightX + cardW <= vw) return { x: rightX, y: vh - cardH, drift: 0 };
-      if (capObs.x - cardW >= 0) return { x: capObs.x - cardW, y: vh - cardH, drift: 0 };
+    // 1단계: 랜덤 x 시도
+    for (let i = 0; i < 150; i++) {
+      const x = Math.random() * Math.max(0, vw - cardW);
+      const y = tryX(x);
+      if (y !== null) return { x, y, drift: 0 };
     }
-    return { x: 0, y: vh - cardH, drift: 0 };
+
+    // 2단계: 체계적으로 열 단위 탐색 (캡처섹션 바깥 우선)
+    const step = cardW + gap;
+    const cols = [];
+    for (let x = 0; x + cardW <= vw; x += step) cols.push(x);
+    // 캡처섹션과 겹치지 않는 열 우선
+    const outside = cols.filter(x => !capObs || !rectsOverlap({ x, y:0, w:cardW, h:vh }, capObs));
+    const inside  = cols.filter(x => capObs && rectsOverlap({ x, y:0, w:cardW, h:vh }, capObs));
+    for (const x of [...outside, ...inside]) {
+      const y = tryX(x);
+      if (y !== null) return { x, y, drift: 0 };
+    }
+
+    // 최후 폴백
+    return { x: capObs ? Math.max(0, capObs.x + capObs.w) : 0, y: vh - cardH, drift: 0 };
   }
   /* --------------------------- */
 
