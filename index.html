@@ -986,8 +986,15 @@
 
     card.style.cssText = `left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;z-index:${z};--rot:${rot.toFixed(1)}deg;--drift-x:${drift ?? 0}px;`;
 
-    const d       = new Date(post.created_at || Date.now());
-    const timeStr = d.toLocaleString("ko-KR", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+    const d  = new Date(post.created_at || Date.now());
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    const yy = d.getFullYear();
+    const hh = d.getHours();
+    const min = String(d.getMinutes()).padStart(2, "0");
+    const ampm = hh >= 12 ? "PM" : "AM";
+    const hh12 = String(hh % 12 || 12).padStart(2, "0");
+    const timeStr = `${mm}.${dd}.${yy} ${ampm} ${hh12}.${min}`;
 
     card.innerHTML = `
       <img src="${post.image}" alt="Smile post" loading="lazy" draggable="false" />
