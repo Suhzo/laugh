@@ -922,7 +922,7 @@
   function findPosition(cardW, cardH) {
     const vw  = window.innerWidth;
     const vh  = window.innerHeight;
-    const gap = 8;
+    const gap = 6;
 
     // 캡처 섹션 장애물
     const capEl = document.querySelector(".capture-section");
@@ -942,7 +942,7 @@
     // 주어진 x에서 겹치지 않는 y 반환, 불가능하면 null
     function tryX(x) {
       let y = vh - cardH;
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 80; i++) {
         const r = { x, y, w: cardW, h: cardH };
         if (capObs && rectsOverlap(r, capObs)) {
           y = capObs.y - cardH - gap;
@@ -957,21 +957,22 @@
       return null;
     }
 
-    // 1단계: 랜덤 x 200회 시도
-    for (let i = 0; i < 200; i++) {
-      const x = Math.random() * Math.max(0, vw - cardW);
+    // 1단계: 랜덤 x 시도 (전체 너비 균등 분할 후 셔플)
+    const step = 6;
+    const xs = [];
+    for (let x = 0; x <= vw - cardW; x += step) xs.push(x);
+    // Fisher-Yates 셔플 → 항상 고른 분포
+    for (let i = xs.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [xs[i], xs[j]] = [xs[j], xs[i]];
+    }
+    for (const x of xs) {
       const y = tryX(x);
       if (y !== null) return { x, y, drift: 0 };
     }
 
-    // 2단계: 1px 단위로 전체 너비 순차 탐색
-    for (let x = 0; x <= vw - cardW; x += 4) {
-      const y = tryX(x);
-      if (y !== null) return { x, y, drift: 0 };
-    }
-
-    // 최후 폴백
-    return { x: 0, y: vh - cardH, drift: 0 };
+    // 최후 폴백 (공간 없을 때)
+    return { x: Math.random() * Math.max(0, vw - cardW), y: vh - cardH, drift: 0 };
   }
   /* --------------------------- */
 
