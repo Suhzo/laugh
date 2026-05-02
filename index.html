@@ -975,11 +975,8 @@
       { x: -200,  y: -9999, w: 200,      h: 99999 }, // left wall
       { x: vw,    y: -9999, w: 200,      h: 99999 }, // right wall
     ];
-    const capEl = document.querySelector(".capture-section");
-    if (capEl) {
-      const r = capEl.getBoundingClientRect();
-      statics.push({ x: r.left, y: r.top, w: r.width, h: r.height });
-    }
+    // capture-section은 z-index:9000으로 카드 위에 항상 표시되므로
+    // 물리 장애물로 등록하지 않음 (등록하면 카드가 viewport 위로 밀려 사라짐)
 
     // Integrate active bodies
     const active = bodies.filter(b => !b.sleeping && !b.dragging);
@@ -1021,7 +1018,8 @@
 
     const rot    = (Math.random() - 0.5) * 16;
     const startX = Math.random() * Math.max(0, window.innerWidth - CARD_W);
-    card.style.cssText = `left:-999px;top:-999px;z-index:${z};--rot:${rot.toFixed(1)}deg;transform:rotate(${rot.toFixed(1)}deg);opacity:0;`;
+    const safeZ  = Math.min(z, 8000); // 항상 capture-section(9000) 아래
+    card.style.cssText = `left:-999px;top:-999px;z-index:${safeZ};--rot:${rot.toFixed(1)}deg;transform:rotate(${rot.toFixed(1)}deg);opacity:0;`;
 
     const d  = new Date(post.created_at || Date.now());
     const mm = String(d.getMonth() + 1).padStart(2, "0");
