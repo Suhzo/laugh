@@ -200,7 +200,7 @@
     .modal-box {
       background: #1a1a1a;
       border: var(--border-ui);
-      box-shadow: var(--sh-ui-lg);
+      box-shadow: none;
       padding: 28px;
       width: 100%;
       max-width: 500px;
@@ -229,7 +229,7 @@
       font-size: 1rem;
       font-weight: 700;
       border: var(--border-ui);
-      box-shadow: var(--sh-ui-sm);
+      box-shadow: none;
       background: #0f0f0f;
       color: var(--fg);
       resize: vertical;
@@ -258,15 +258,15 @@
       font-family: 'Bebas Neue', cursive;
       font-size: 1.6rem;
       letter-spacing: 3px;
-      background: var(--blue);
-      color: #fff;
-      border: var(--border-ui);
-      box-shadow: var(--sh-ui-md);
+      background: #c8c8c8;
+      color: #333;
+      border: none;
+      box-shadow: none;
       cursor: pointer;
       transition: transform 0.08s, box-shadow 0.08s;
     }
-    #shareBtn:hover:not(:disabled) { transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--fg); }
-    #shareBtn:active:not(:disabled) { transform: translate(3px,3px); box-shadow: 2px 2px 0 var(--fg); }
+    #shareBtn:hover:not(:disabled) { background: #b0b0b0; }
+    #shareBtn:active:not(:disabled) { background: #a0a0a0; }
     #shareBtn:disabled { opacity: 0.55; cursor: not-allowed; }
 
     #cancelBtn {
@@ -277,11 +277,11 @@
       background: transparent;
       color: var(--fg);
       border: var(--border-ui);
-      box-shadow: var(--sh-ui-md);
+      box-shadow: none;
       cursor: pointer;
-      transition: background 0.1s, color 0.1s, transform 0.08s, box-shadow 0.08s;
+      transition: background 0.1s, color 0.1s;
     }
-    #cancelBtn:hover { background: var(--red); color: #fff; transform: translate(-2px,-2px); box-shadow: 7px 7px 0 var(--fg); }
+    #cancelBtn:hover { background: var(--red); color: #fff; }
 
     /* ===== FEED ===== */
 
@@ -505,11 +505,11 @@
 <!-- ===== MODAL ===== -->
 <div class="modal-bg" id="modalBg">
   <div class="modal-box">
-    <p class="modal-title">📸 Share Your Smile</p>
+    <p class="modal-title">I like your smile..</p>
     <img id="previewImg" alt="Your captured smile" />
     <textarea
       id="postText"
-      placeholder="이 순간이 좋은 이유… (최대 140자)"
+      placeholder="행복해서 웃는게 아니라 웃어서 행복한거야..."
       maxlength="140"
     ></textarea>
     <p class="char-row"><span id="charLeft">140</span> chars left</p>
