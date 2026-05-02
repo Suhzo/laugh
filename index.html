@@ -300,14 +300,8 @@
       touch-action: none;
       pointer-events: all;
       overflow: hidden;
-      animation: gravityFall 0.55s cubic-bezier(0.4, 0, 1, 0.8) forwards;
-      will-change: transform;
+      will-change: left, top;
       transition: filter 0.15s ease;
-    }
-
-    @keyframes gravityFall {
-      0%   { opacity: 0; transform: rotate(var(--rot)) translate(var(--drift-x, 0px), -110vh); }
-      100% { opacity: 1; transform: rotate(var(--rot)) translate(0px, 0px); }
     }
 
     .delete-btn {
@@ -915,66 +909,109 @@
     document.body.appendChild(makeCard(post, ++zCounter));
   }
 
-  /* ---- Placement helpers ---- */
-  function rectsOverlap(a, b) {
-    return a.x < b.x + b.w && a.x + a.w > b.x &&
-           a.y < b.y + b.h && a.y + a.h > b.y;
+  /* ============================================================
+   * PHYSICS ENGINE
+   * ============================================================ */
+  const CARD_W   = 210;
+  const CARD_H   = 210;
+  const GRAV     = 0.55;   // px/frame²
+  const BOUNCE   = 0.10;   // restitution
+  const FL_FRIC  = 0.80;   // floor friction on vx
+  const SLEEP_V  = 0.30;   // sleep velocity threshold
+  const SLEEP_N  = 30;     // frames below threshold before sleep
+  const MAX_VY   = 24;     // terminal velocity
+
+  const bodies = [];
+  let physRaf = null;
+
+  function bodyAdd(el, startX) {
+    const b = {
+      el,
+      x:  Math.max(0, Math.min(window.innerWidth - CARD_W, startX)),
+      y:  -CARD_H - Math.random() * 60,
+      vx: (Math.random() - 0.5) * 1.2,
+      vy: 0.5,
+      still: 0,
+      sleeping: false,
+      dragging: false,
+    };
+    bodies.push(b);
+    el.style.left    = b.x + "px";
+    el.style.top     = b.y + "px";
+    el.style.opacity = "1";
+    if (!physRaf) physRaf = requestAnimationFrame(physTick);
+    return b;
   }
 
-  function findPosition(cardW, cardH) {
-    const vw  = window.innerWidth;
-    const vh  = window.innerHeight;
-    const gap = 6;
+  function bodyGet(el) { return bodies.find(b => b.el === el); }
 
-    // 캡처 섹션 장애물
+  // Resolve body b against a static AABB rect s
+  function resolveStatic(b, s) {
+    const bR = b.x + CARD_W, bB = b.y + CARD_H;
+    const sR = s.x + s.w,    sB = s.y + s.h;
+    if (b.x >= sR || bR <= s.x || b.y >= sB || bB <= s.y) return;
+
+    const dL = bR - s.x, dR = sR - b.x;
+    const dT = bB - s.y, dB = sB - b.y;
+    const mX = Math.min(dL, dR), mY = Math.min(dT, dB);
+
+    if (mY <= mX) {
+      if (dT < dB) { b.y -= dT; if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; } }
+      else         { b.y += dB; if (b.vy < 0)   b.vy = -b.vy * BOUNCE; }
+    } else {
+      if (dL < dR) { b.x -= dL; if (b.vx > 0) b.vx = -b.vx * BOUNCE; }
+      else         { b.x += dR; if (b.vx < 0) b.vx = -b.vx * BOUNCE; }
+    }
+  }
+
+  function physTick() {
+    physRaf = requestAnimationFrame(physTick);
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+
+    // Static world boundaries
+    const statics = [
+      { x: -200,  y: vh,    w: vw + 400, h: 200 },  // floor
+      { x: -200,  y: -9999, w: 200,      h: 99999 }, // left wall
+      { x: vw,    y: -9999, w: 200,      h: 99999 }, // right wall
+    ];
     const capEl = document.querySelector(".capture-section");
-    let capObs = null;
     if (capEl) {
       const r = capEl.getBoundingClientRect();
-      const pad = 20;
-      capObs = { x: r.left - pad, y: r.top - pad, w: r.width + pad*2, h: r.height + pad*2 };
+      statics.push({ x: r.left, y: r.top, w: r.width, h: r.height });
     }
 
-    // 기존 카드들
-    const placed = [];
-    document.querySelectorAll(".post-card").forEach(c => {
-      placed.push({ x: parseFloat(c.style.left)||0, y: parseFloat(c.style.top)||0, w: cardW, h: cardH });
-    });
+    // Integrate active bodies
+    const active = bodies.filter(b => !b.sleeping && !b.dragging);
+    for (const b of active) {
+      b.vy = Math.min(b.vy + GRAV, MAX_VY);
+      b.x += b.vx;
+      b.y += b.vy;
+    }
 
-    // 주어진 x에서 겹치지 않는 y 반환, 불가능하면 null
-    function tryX(x) {
-      let y = vh - cardH;
-      for (let i = 0; i < 80; i++) {
-        const r = { x, y, w: cardW, h: cardH };
-        if (capObs && rectsOverlap(r, capObs)) {
-          y = capObs.y - cardH - gap;
-          if (y < 0) return null;
-          continue;
+    // Collision passes (3 iterations for stability)
+    for (let pass = 0; pass < 3; pass++) {
+      for (const b of active) {
+        // vs static world
+        for (const s of statics) resolveStatic(b, s);
+        // vs other cards (sleeping = static)
+        for (const o of bodies) {
+          if (o === b || o.dragging) continue;
+          resolveStatic(b, { x: o.x, y: o.y, w: CARD_W, h: CARD_H });
         }
-        const hit = placed.find(p => rectsOverlap(r, p));
-        if (!hit) return y;
-        y = hit.y - cardH - gap;
-        if (y < 0) return null;
       }
-      return null;
     }
 
-    // 1단계: 랜덤 x 시도 (전체 너비 균등 분할 후 셔플)
-    const step = 6;
-    const xs = [];
-    for (let x = 0; x <= vw - cardW; x += step) xs.push(x);
-    // Fisher-Yates 셔플 → 항상 고른 분포
-    for (let i = xs.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [xs[i], xs[j]] = [xs[j], xs[i]];
+    // Sleep & DOM update
+    for (const b of active) {
+      if (Math.abs(b.vx) < SLEEP_V && Math.abs(b.vy) < SLEEP_V) {
+        if (++b.still >= SLEEP_N) { b.sleeping = true; b.vx = 0; b.vy = 0; }
+      } else {
+        b.still = 0;
+      }
+      b.el.style.left = b.x.toFixed(1) + "px";
+      b.el.style.top  = b.y.toFixed(1) + "px";
     }
-    for (const x of xs) {
-      const y = tryX(x);
-      if (y !== null) return { x, y, drift: 0 };
-    }
-
-    // 최후 폴백 (공간 없을 때)
-    return { x: Math.random() * Math.max(0, vw - cardW), y: vh - cardH, drift: 0 };
   }
   /* --------------------------- */
 
@@ -982,11 +1019,9 @@
     const card = document.createElement("div");
     card.className = "post-card";
 
-    const cw  = 210, ch = 210;
-    const { x, y, drift } = findPosition(cw, ch);
-    const rot = (Math.random() - 0.5) * 30;
-
-    card.style.cssText = `left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;z-index:${z};--rot:${rot.toFixed(1)}deg;--drift-x:${drift ?? 0}px;`;
+    const rot    = (Math.random() - 0.5) * 16;
+    const startX = Math.random() * Math.max(0, window.innerWidth - CARD_W);
+    card.style.cssText = `left:-999px;top:-999px;z-index:${z};--rot:${rot.toFixed(1)}deg;transform:rotate(${rot.toFixed(1)}deg);opacity:0;`;
 
     const d  = new Date(post.created_at || Date.now());
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -1016,6 +1051,9 @@
 
     card.addEventListener("mousedown",  e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); });
     card.addEventListener("touchstart", e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); }, { passive: false });
+
+    // Spawn physics body after appended to DOM (caller appends then physics runs)
+    requestAnimationFrame(() => bodyAdd(card, startX));
     return card;
   }
 
@@ -1026,12 +1064,14 @@
     e.preventDefault();
     dragEl = card;
     card.style.zIndex = ++zCounter;
-    card.style.animation = "none";
+
+    const b = bodyGet(card);
+    if (b) { b.dragging = true; b.sleeping = false; b.vx = 0; b.vy = 0; }
 
     const rot = card.style.getPropertyValue("--rot");
-    card.style.transform  = `rotate(${rot}) scale(1.07) translateY(-16px)`;
-    card.style.filter     = "drop-shadow(0 20px 28px rgba(0,0,0,0.55))";
-    card.style.cursor     = "grabbing";
+    card.style.transform = `rotate(${rot}) scale(1.05)`;
+    card.style.filter    = "drop-shadow(0 16px 24px rgba(0,0,0,0.5))";
+    card.style.cursor    = "grabbing";
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
@@ -1039,16 +1079,32 @@
     dragOY = clientY - parseFloat(card.style.top);
   }
 
+  let prevDragX = 0, prevDragY = 0;
   function onDragMove(e) {
     if (!dragEl) return;
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    dragEl.style.left = (clientX - dragOX) + "px";
-    dragEl.style.top  = (clientY - dragOY) + "px";
+    const nx = clientX - dragOX;
+    const ny = clientY - dragOY;
+    const b  = bodyGet(dragEl);
+    if (b) { b.x = nx; b.y = ny; }
+    dragEl.style.left = nx + "px";
+    dragEl.style.top  = ny + "px";
+    prevDragX = clientX;
+    prevDragY = clientY;
   }
 
   function onDragEnd() {
     if (!dragEl) return;
+    const b = bodyGet(dragEl);
+    if (b) {
+      b.dragging = false;
+      b.sleeping = false;
+      b.still    = 0;
+      // Give it a small drop velocity so it falls naturally
+      b.vy = 2;
+      b.vx = 0;
+    }
     const rot = dragEl.style.getPropertyValue("--rot");
     dragEl.style.transform = `rotate(${rot})`;
     dragEl.style.filter    = "none";
