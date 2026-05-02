@@ -945,7 +945,7 @@
 
   function bodyGet(el) { return bodies.find(b => b.el === el); }
 
-  // Resolve body b against a static AABB rect s
+  // 일반 정적 장애물 충돌 해결 (최소 침투 축)
   function resolveStatic(b, s) {
     const bR = b.x + CARD_W, bB = b.y + CARD_H;
     const sR = s.x + s.w,    sB = s.y + s.h;
@@ -964,10 +964,36 @@
     }
   }
 
+  // 캡처 섹션 전용: 항상 수평(좌우)으로만 밀어냄 → 위로 사라지지 않음
+  function resolveCapture(b, s) {
+    const bR = b.x + CARD_W, bB = b.y + CARD_H;
+    const sR = s.x + s.w,    sB = s.y + s.h;
+    if (b.x >= sR || bR <= s.x || b.y >= sB || bB <= s.y) return;
+
+    const dL = bR - s.x;   // 왼쪽으로 밀 거리
+    const dR = sR - b.x;   // 오른쪽으로 밀 거리
+
+    if (dL <= dR) {
+      b.x -= dL;
+      b.vx = -Math.abs(b.vx) * BOUNCE - 0.5;  // 왼쪽으로 튕김
+    } else {
+      b.x += dR;
+      b.vx =  Math.abs(b.vx) * BOUNCE + 0.5;  // 오른쪽으로 튕김
+    }
+  }
+
   function physTick() {
     physRaf = requestAnimationFrame(physTick);
     const vw = window.innerWidth;
     const vh = window.innerHeight;
+
+    // 캡처 섹션 경계 (매 프레임 최신 위치 반영)
+    let capRect = null;
+    const capEl = document.querySelector(".capture-section");
+    if (capEl) {
+      const r = capEl.getBoundingClientRect();
+      capRect = { x: r.left, y: r.top, w: r.width, h: r.height };
+    }
 
     // Static world boundaries
     const statics = [
@@ -975,8 +1001,6 @@
       { x: -200,  y: -9999, w: 200,      h: 99999 }, // left wall
       { x: vw,    y: -9999, w: 200,      h: 99999 }, // right wall
     ];
-    // capture-section은 z-index:9000으로 카드 위에 항상 표시되므로
-    // 물리 장애물로 등록하지 않음 (등록하면 카드가 viewport 위로 밀려 사라짐)
 
     // Integrate active bodies
     const active = bodies.filter(b => !b.sleeping && !b.dragging);
@@ -986,12 +1010,14 @@
       b.y += b.vy;
     }
 
-    // Collision passes (3 iterations for stability)
-    for (let pass = 0; pass < 3; pass++) {
+    // Collision passes (4 iterations for stability)
+    for (let pass = 0; pass < 4; pass++) {
       for (const b of active) {
-        // vs static world
+        // vs 바닥·벽
         for (const s of statics) resolveStatic(b, s);
-        // vs other cards (sleeping = static)
+        // vs 캡처 섹션 (수평 전용)
+        if (capRect) resolveCapture(b, capRect);
+        // vs 다른 카드 (sleeping = 정적)
         for (const o of bodies) {
           if (o === b || o.dragging) continue;
           resolveStatic(b, { x: o.x, y: o.y, w: CARD_W, h: CARD_H });
