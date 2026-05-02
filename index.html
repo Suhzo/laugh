@@ -936,7 +936,7 @@
       el,
       x:  startX,
       y:  -CARD_H - Math.random() * 60,
-      vx: (Math.random() - 0.5) * 1.2,
+      vx: (Math.random() - 0.5) * 0.5,
       vy: 0.5,
       still: 0,
       sleeping: false,
@@ -978,16 +978,28 @@
     const sR = s.x + s.w,    sB = s.y + s.h;
     if (b.x >= sR || bR <= s.x || b.y >= sB || bB <= s.y) return;
 
-    const dL = bR - s.x;   // 왼쪽으로 밀 거리
-    const dR = sR - b.x;   // 오른쪽으로 밀 거리
+    const dL = bR - s.x;
+    const dR = sR - b.x;
 
-    if (dL <= dR) {
-      b.x -= dL;
-      b.vx = -Math.abs(b.vx) * BOUNCE - 0.5;  // 왼쪽으로 튕김
-    } else {
-      b.x += dR;
-      b.vx =  Math.abs(b.vx) * BOUNCE + 0.5;  // 오른쪽으로 튕김
+    if (dL <= dR) { b.x -= dL; if (b.vx > 0) b.vx *= -BOUNCE; }
+    else          { b.x += dR; if (b.vx < 0) b.vx *= -BOUNCE; }
+  }
+
+  // 카드끼리 충돌: 위에서 떨어지는 카드는 수직 우선으로 쌓임
+  function resolveCardOnCard(b, o) {
+    const bR = b.x + CARD_W, bB = b.y + CARD_H;
+    const oR = o.x + CARD_W, oB = o.y + CARD_H;
+    if (b.x >= oR || bR <= o.x || b.y >= oB || bB <= o.y) return;
+
+    // b의 중심이 o의 중심보다 위 → b가 o 위에 착지하는 상황 → 수직 해결
+    if (b.y + CARD_H * 0.5 < o.y + CARD_H * 0.5) {
+      const dT = bB - o.y;
+      b.y -= dT;
+      if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; }
+      return;
     }
+    // 그 외(옆에서 닿는 경우): 최소 침투 축
+    resolveStatic(b, { x: o.x, y: o.y, w: CARD_W, h: CARD_H });
   }
 
   function physTick() {
@@ -1014,6 +1026,7 @@
     const active = bodies.filter(b => !b.sleeping && !b.dragging);
     for (const b of active) {
       b.vy = Math.min(b.vy + GRAV, MAX_VY);
+      b.vx *= 0.97;  // 수평 공기저항 — 벽 쏠림 방지
       b.x += b.vx;
       b.y += b.vy;
     }
@@ -1025,10 +1038,10 @@
         for (const s of statics) resolveStatic(b, s);
         // vs 캡처 섹션 (수평 전용)
         if (capRect) resolveCapture(b, capRect);
-        // vs 다른 카드 (sleeping = 정적)
+        // vs 다른 카드 (수직 우선 스태킹)
         for (const o of bodies) {
           if (o === b || o.dragging) continue;
-          resolveStatic(b, { x: o.x, y: o.y, w: CARD_W, h: CARD_H });
+          resolveCardOnCard(b, o);
         }
       }
     }
