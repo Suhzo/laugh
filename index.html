@@ -934,6 +934,7 @@
       still: 0,
       sleeping: false,
       dragging: false,
+      inView: false,
     };
     bodies.push(b);
     el.style.left    = b.x + "px";
@@ -1025,13 +1026,26 @@
       }
     }
 
-    // Sleep & DOM update
+    // Sleep, 뷰포트 경계 클램프, DOM update
     for (const b of active) {
+      // 한번이라도 화면 안에 들어온 카드는 다시 나가지 못하게
+      if (b.y >= 0) b.inView = true;
+
+      // X: 항상 화면 안
+      if (b.x < 0)          { b.x = 0;          if (b.vx < 0) b.vx = 0; }
+      if (b.x > vw - CARD_W) { b.x = vw - CARD_W; if (b.vx > 0) b.vx = 0; }
+
+      // Y: 위는 진입 후에만 클램프 (스폰 낙하는 허용), 아래는 항상
+      if (b.inView && b.y < 0)          { b.y = 0;          if (b.vy < 0) b.vy = 0; }
+      if (b.y > vh - CARD_H)            { b.y = vh - CARD_H; if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; } }
+
+      // Sleep
       if (Math.abs(b.vx) < SLEEP_V && Math.abs(b.vy) < SLEEP_V) {
         if (++b.still >= SLEEP_N) { b.sleeping = true; b.vx = 0; b.vy = 0; }
       } else {
         b.still = 0;
       }
+
       b.el.style.left = b.x.toFixed(1) + "px";
       b.el.style.top  = b.y.toFixed(1) + "px";
     }
