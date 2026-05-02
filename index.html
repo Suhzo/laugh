@@ -37,6 +37,8 @@
       font-family: 'Space Grotesk', 'Noto Sans KR', sans-serif;
       color: var(--fg);
       min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
     }
 
     /* ===== CAPTURE SECTION ===== */
@@ -47,11 +49,13 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      pointer-events: none;
     }
 
-    .webcam-wrap  { position: relative; z-index: 9010; }
-    .meter-wrap   { position: relative; z-index: 9010; }
-    #captureBtn   { position: relative; z-index: 9010; }
+    .webcam-wrap       { position: relative; z-index: 9010; pointer-events: auto; }
+    .capture-controls  { position: relative; z-index: 9010; pointer-events: auto; }
+    .meter-wrap        { position: relative; z-index: 9010; pointer-events: auto; }
+    #captureBtn        { position: relative; z-index: 9010; pointer-events: auto; }
 
     .section-heading {
       font-family: 'Bebas Neue', cursive;
@@ -67,6 +71,7 @@
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 3px;
+      line-height: 1.2;
       opacity: 0.45;
       margin-bottom: 36px;
       text-align: center;
@@ -75,7 +80,7 @@
     /* Camera */
     .webcam-wrap {
       position: relative;
-      width: min(480px, 100%);
+      width: min(384px, 100%);
       background: #111;
       overflow: hidden;
     }
@@ -122,9 +127,19 @@
     }
 
     /* Meter */
+    .capture-controls {
+      width: min(416px, 100%);
+      margin-top: 10px;
+      padding: 10px 20px 16px;
+      background: rgba(18,18,18,0.3);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
     .meter-wrap {
-      width: min(480px, 100%);
-      margin-top: 12px;
+      width: min(384px, 100%);
+      margin-top: 0;
     }
 
     .meter-row {
@@ -138,7 +153,7 @@
     }
 
     .meter-track {
-      height: 22px;
+      height: 18px;
       background: #2a2a2a;
       overflow: hidden;
     }
@@ -153,16 +168,16 @@
 
     /* Capture button */
     #captureBtn {
-      margin-top: 28px;
-      width: 72px;
-      height: 72px;
+      margin-top: 18px;
+      width: 58px;
+      height: 58px;
       border-radius: 50%;
       background: #555;
       color: #fff;
       border: none;
       box-shadow: none;
       cursor: pointer;
-      transition: transform 0.08s, background 0.15s;
+      transition: background 0.15s;
       user-select: none;
       display: flex;
       align-items: center;
@@ -175,14 +190,10 @@
       cursor: not-allowed;
     }
 
-    #captureBtn:not(:disabled):hover {
-      transform: translate(-3px, -3px);
+    #captureBtn svg {
+      width: 26px;
+      height: 26px;
     }
-
-    #captureBtn:not(:disabled):active {
-      transform: translate(3px, 3px);
-    }
-
 
     /* ===== MODAL ===== */
     .modal-bg {
@@ -285,12 +296,28 @@
     #cancelBtn:hover { background: var(--red); color: #fff; }
 
     /* ===== FEED ===== */
+    #pileStage {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      min-height: 100vh;
+      padding: 24px 0 28px;
+      overflow: visible;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    .pile-empty {
+      display: none;
+    }
 
 
     /* Card */
     .post-card {
-      position: fixed;
-      width: 210px;
+      position: absolute;
+      width: min(168px, calc(100vw - 36px));
       background: transparent;
       padding: 0;
       border: none;
@@ -298,10 +325,21 @@
       cursor: grab;
       user-select: none;
       touch-action: none;
-      pointer-events: all;
+      pointer-events: auto;
       overflow: hidden;
       will-change: left, top;
       transition: filter 0.15s ease;
+    }
+    .post-card.drop-in {
+      animation: cardDrop 1.45s cubic-bezier(0.28, 0.04, 0.2, 1) both;
+    }
+    @keyframes cardDrop {
+      0% {
+        transform: translateY(var(--drop-distance, -100vh)) rotate(var(--rot));
+      }
+      100% {
+        transform: translateY(0) rotate(var(--rot));
+      }
     }
 
     .delete-btn {
@@ -311,9 +349,9 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: none;
+      background: rgba(128,128,128,0.3);
       border: none;
-      color: rgba(255,255,255,0.5);
+      color: #fff;
       font-size: 13px;
       font-weight: bold;
       line-height: 1;
@@ -323,9 +361,9 @@
       justify-content: center;
       z-index: 20;
       padding: 0;
-      transition: color 0.15s;
+      transition: background 0.15s;
     }
-    .delete-btn:hover { color: rgba(255,80,80,0.95); }
+    .delete-btn:hover { background: rgba(128,128,128,0.5); }
 
     #pwModal {
       display: none;
@@ -346,6 +384,16 @@
       flex-direction: column;
       gap: 12px;
       min-width: 240px;
+    }
+    #pwModal .pw-box.shake {
+      animation: pwShake 0.35s ease;
+    }
+    @keyframes pwShake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-5px); }
+      40% { transform: translateX(5px); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
     }
     #pwModal .pw-box p {
       color: #eee;
@@ -432,35 +480,34 @@
     /* ===== TOAST ===== */
     #toast {
       position: fixed;
-      bottom: 28px;
+      top: 50%;
       left: 50%;
-      transform: translateX(-50%) translateY(12px);
-      background: var(--fg);
-      color: var(--black);
-      border: var(--border-ui);
-      box-shadow: var(--sh-ui-md);
-      padding: 12px 26px;
-      font-size: 0.72rem;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      z-index: 500;
+      transform: translate(-50%, -50%);
+      background: #2f2f2f;
+      color: #f0f0f0;
+      border: 1px solid rgba(109,109,109,0.7);
+      box-shadow: none;
+      padding: 16px 22px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      letter-spacing: 0;
+      line-height: 1.45;
+      z-index: 2147483647;
       opacity: 0;
-      transition: opacity 0.2s, transform 0.2s;
-      white-space: nowrap;
+      transition: opacity 0.45s ease;
+      width: min(360px, calc(100% - 40px));
+      text-align: center;
       pointer-events: none;
     }
     #toast.show {
       opacity: 1;
-      transform: translateX(-50%) translateY(0);
     }
 
     /* ===== RESPONSIVE ===== */
     @media (max-width: 520px) {
 
       .capture-section { padding: 32px 16px; }
-      .feed-section { padding: 32px 16px 72px; }
-      #captureBtn { font-size: 1.6rem; padding: 16px 32px; }
+      #captureBtn { width: 58px; height: 58px; }
     }
   </style>
 </head>
@@ -479,23 +526,27 @@
 
   <canvas id="canvas"></canvas>
 
-  <div class="meter-wrap">
-    <div class="meter-row">
-      <span>SMILE METER</span>
-      <span id="smilePct">0%</span>
+  <div class="capture-controls">
+    <div class="meter-wrap">
+      <div class="meter-row">
+        <span>SMILE METER</span>
+        <span id="smilePct">0%</span>
+      </div>
+      <div class="meter-track">
+        <div class="meter-fill" id="meterFill"></div>
+      </div>
     </div>
-    <div class="meter-track">
-      <div class="meter-fill" id="meterFill"></div>
-    </div>
-  </div>
 
-  <button id="captureBtn" disabled>
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
-      <circle cx="12" cy="13" r="4"/>
-    </svg>
-  </button>
+    <button id="captureBtn" disabled>
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+        <circle cx="12" cy="13" r="4"/>
+      </svg>
+    </button>
+  </div>
 </section>
+
+<section id="pileStage" aria-label="Smile guestbook"></section>
 
 <!-- ===== MODAL ===== -->
 <div class="modal-bg" id="modalBg">
@@ -509,7 +560,7 @@
     ></textarea>
     <p class="char-row"><span id="charLeft">140</span> chars left</p>
     <div class="modal-actions">
-      <button id="shareBtn">SHARE IT →</button>
+      <button id="shareBtn">SHARE</button>
       <button id="cancelBtn">CANCEL</button>
     </div>
   </div>
@@ -517,8 +568,8 @@
 
 <div id="pwModal">
   <div class="pw-box">
-    <p>🔐 비밀번호를 입력하세요</p>
-    <input id="pwInput" type="password" placeholder="비밀번호" />
+    <p>삭제를 원한다면 그녀를 찬양해...</p>
+    <input id="pwInput" type="text" placeholder="비밀번호" />
     <div class="pw-actions">
       <button id="pwConfirm">삭제</button>
       <button id="pwCancel">취소</button>
@@ -539,7 +590,7 @@
    *   2. Run this SQL to create the posts table:
    *        create table posts (
    *          id uuid default uuid_generate_v4() primary key,
-   *          image text not null,
+   *          image_url text not null,
    *          text  text not null,
    *          created_at timestamptz default now()
    *        );
@@ -550,8 +601,8 @@
    *
    * Leave both empty → single-browser mode (localStorage).
    * ============================================================ */
-  const SUPABASE_URL      = "";
-  const SUPABASE_ANON_KEY = "";
+  const SUPABASE_URL      = "https://xlqmvlslsclzxepmsnwe.supabase.co";
+  const SUPABASE_ANON_KEY = "sb_publishable_1gC9yAHLLszm4C71rSDuZQ_vdgKpv7W";
 
   /* ============================================================
    * MEDIAPIPE IMPORT (CDN)
@@ -565,6 +616,7 @@
   const SMILE_THRESHOLD = 0.42; // avg of mouthSmileLeft + mouthSmileRight
   const LS_KEY          = "smile_share_v1";
   const MAX_LOCAL       = 50;
+  const STORAGE_BUCKET  = "smiles";
   const USE_SUPABASE    = !!(SUPABASE_URL && SUPABASE_ANON_KEY);
 
   /* ============================================================
@@ -584,10 +636,12 @@
   const shareBtn    = document.getElementById("shareBtn");
   const cancelBtn   = document.getElementById("cancelBtn");
   const toastEl     = document.getElementById("toast");
+  const pileStage   = document.getElementById("pileStage");
   const pwModal     = document.getElementById("pwModal");
   const pwInput     = document.getElementById("pwInput");
   const pwConfirm   = document.getElementById("pwConfirm");
   const pwCancel    = document.getElementById("pwCancel");
+  const pwBox       = document.querySelector("#pwModal .pw-box");
 
   let pendingCard = null;
   let pendingPost = null;
@@ -606,16 +660,20 @@
   }
   function confirmDelete() {
     if (!pendingCard) return;
-    if (pwInput.value === "서현이최고") {
+    if (pwInput.value === "조서현최고") {
       pendingCard.style.transition = "opacity 0.25s";
       pendingCard.style.opacity = "0";
       const c = pendingCard, p = pendingPost;
-      setTimeout(() => c.remove(), 250);
+      setTimeout(() => { c.remove(); layoutPile(); }, 250);
       removeFromStorage(p.id);
       closePwModal();
+      showToast("오냐...정성이 갸륵하여 지워주겠도다..");
     } else {
       pwInput.value = "";
-      pwInput.placeholder = "틀렸습니다. 다시 입력";
+      pwInput.placeholder = "다시 해보거라..";
+      pwBox.classList.remove("shake");
+      void pwBox.offsetWidth;
+      pwBox.classList.add("shake");
       pwInput.focus();
     }
   }
@@ -800,7 +858,7 @@
     if (!capturedUrl) return;
 
     const text = postText.value.trim() || "😄";
-    const post = {
+    let post = {
       id:         Date.now().toString(),
       image:      capturedUrl,
       text,
@@ -812,19 +870,23 @@
 
     try {
       if (USE_SUPABASE) {
-        await supabaseInsert(post);
+        const imageUrl = await supabaseUploadImage(capturedUrl);
+        post = await supabaseInsert({
+          image_url: imageUrl,
+          text
+        });
       } else {
         localSave(post);
       }
       prependCard(post);
       closeModal();
-      showToast("Your smile is live! 😄");
+      showToast("아름다운 웃음을 가졌구나...");
     } catch (err) {
       console.error(err);
       showToast("공유 실패. 다시 시도해 주세요!");
     } finally {
       shareBtn.disabled    = false;
-      shareBtn.textContent = "SHARE IT →";
+      shareBtn.textContent = "SHARE";
     }
   });
 
@@ -866,24 +928,70 @@
     sbClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }
 
+  function dataUrlToBlob(dataUrl) {
+    const [meta, base64] = dataUrl.split(",");
+    const mime = meta.match(/:(.*?);/)?.[1] || "image/jpeg";
+    const bin = atob(base64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i += 1) bytes[i] = bin.charCodeAt(i);
+    return new Blob([bytes], { type: mime });
+  }
+
+  async function supabaseUploadImage(dataUrl) {
+    if (!sbClient) throw new Error("Supabase not initialised");
+
+    const blob = dataUrlToBlob(dataUrl);
+    const id = crypto.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const filePath = `public/${id}.jpg`;
+    const { error } = await sbClient.storage
+      .from(STORAGE_BUCKET)
+      .upload(filePath, blob, {
+        contentType: "image/jpeg",
+        cacheControl: "31536000",
+        upsert: false
+      });
+
+    if (error) throw error;
+
+    const { data } = sbClient.storage
+      .from(STORAGE_BUCKET)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  }
+
   async function supabaseInsert(post) {
     if (!sbClient) throw new Error("Supabase not initialised");
-    const { error } = await sbClient.from("posts").insert({
-      image: post.image,
-      text:  post.text
-    });
+    const { data, error } = await sbClient
+      .from("posts")
+      .insert({
+        image_url: post.image_url,
+        text: post.text
+      })
+      .select("id,image_url,text,created_at")
+      .single();
     if (error) throw error;
+    return normalizePost(data);
   }
 
   async function supabaseFetchAll() {
     if (!sbClient) throw new Error("Supabase not initialised");
     const { data, error } = await sbClient
       .from("posts")
-      .select("id,image,text,created_at")
+      .select("id,image_url,text,created_at")
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw error;
-    return data;
+    return data.map(normalizePost);
+  }
+
+  function normalizePost(post) {
+    return {
+      id: post.id,
+      image: post.image_url || post.image,
+      text: post.text,
+      created_at: post.created_at
+    };
   }
 
   /* ============================================================
@@ -892,185 +1000,149 @@
   async function loadFeed() {
     try {
       const posts = USE_SUPABASE ? await supabaseFetchAll() : localAll();
-      document.querySelectorAll(".post-card").forEach(c => c.remove());
-      if (!posts.length) return;
+      pileStage.innerHTML = "";
+      if (!posts.length) {
+        renderPileEmpty();
+        return;
+      }
       [...posts].reverse().forEach((p, i) => {
-        setTimeout(() => {
-          const card = makeCard(p, i + 1);
-          document.body.appendChild(card);
-          bodyAdd(card);
-        }, i * 350);
+        const card = makeCard(p, i + 1);
+        pileStage.appendChild(card);
       });
+      layoutPile(true);
       zCounter = posts.length + 1;
     } catch (e) {
-      console.error(e);
       console.error(e);
     }
   }
 
 
   function prependCard(post) {
+    pileStage.querySelector(".pile-empty")?.remove();
     const card = makeCard(post, ++zCounter);
-    document.body.appendChild(card);
-    bodyAdd(card);
+    pileStage.appendChild(card);
+    layoutPile(true);
+  }
+
+  function renderPileEmpty() {
+    pileStage.style.minHeight = `${Math.max(240, window.innerHeight)}px`;
+    pileStage.innerHTML = `<div class="pile-empty">NO SMILES YET<br>TAKE THE FIRST ONE</div>`;
   }
 
   /* ============================================================
-   * PHYSICS ENGINE
+   * PILE LAYOUT
    * ============================================================ */
-  const CARD_W   = 210;
-  const CARD_H   = 210;
-  const GRAV     = 0.55;   // px/frame²
-  const BOUNCE   = 0.10;   // restitution
-  const FL_FRIC  = 0.80;   // floor friction on vx
-  const SLEEP_V  = 0.30;   // sleep velocity threshold
-  const SLEEP_N  = 30;     // frames below threshold before sleep
-  const MAX_VY   = 24;     // terminal velocity
+  const CARD_W   = 168;
+  const CARD_H   = 168;
+  const ROW_GAP  = 26;
+  const EDGE_PAD = 18;
+  const PILE_Y_JITTER = 14;
 
-  const bodies = [];
-  let physRaf = null;
-
-  function bodyAdd(el) {
-    const startX = Math.random() * Math.max(0, window.innerWidth - CARD_W);
-    const b = {
-      el,
-      x:  startX,
-      y:  -CARD_H - Math.random() * 60,
-      vx: (Math.random() - 0.5) * 0.5,
-      vy: 0.5,
-      still: 0,
-      sleeping: false,
-      dragging: false,
-      inView: false,
-    };
-    bodies.push(b);
-    el.style.left    = b.x + "px";
-    el.style.top     = b.y + "px";
-    el.style.opacity = "1";
-    if (!physRaf) physRaf = requestAnimationFrame(physTick);
-    return b;
+  function cardSize() {
+    const w = Math.min(CARD_W, Math.max(120, pileStage.clientWidth - EDGE_PAD * 2));
+    return { w, h: w };
   }
 
-  function bodyGet(el) { return bodies.find(b => b.el === el); }
-
-  // 일반 정적 장애물 충돌 해결 (최소 침투 축)
-  function resolveStatic(b, s) {
-    const bR = b.x + CARD_W, bB = b.y + CARD_H;
-    const sR = s.x + s.w,    sB = s.y + s.h;
-    if (b.x >= sR || bR <= s.x || b.y >= sB || bB <= s.y) return;
-
-    const dL = bR - s.x, dR = sR - b.x;
-    const dT = bB - s.y, dB = sB - b.y;
-    const mX = Math.min(dL, dR), mY = Math.min(dT, dB);
-
-    if (mY <= mX) {
-      if (dT < dB) { b.y -= dT; if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; } }
-      else         { b.y += dB; if (b.vy < 0)   b.vy = -b.vy * BOUNCE; }
-    } else {
-      if (dL < dR) { b.x -= dL; if (b.vx > 0) b.vx = -b.vx * BOUNCE; }
-      else         { b.x += dR; if (b.vx < 0) b.vx = -b.vx * BOUNCE; }
-    }
+  function randomBetween(min, max) {
+    return min + Math.random() * Math.max(0, max - min);
   }
 
-  // 캡처 섹션 전용: 항상 수평(좌우)으로만 밀어냄 → 위로 사라지지 않음
-  function resolveCapture(b, s) {
-    const bR = b.x + CARD_W, bB = b.y + CARD_H;
-    const sR = s.x + s.w,    sB = s.y + s.h;
-    if (b.x >= sR || bR <= s.x || b.y >= sB || bB <= s.y) return;
-
-    const dL = bR - s.x;
-    const dR = sR - b.x;
-
-    if (dL <= dR) { b.x -= dL; if (b.vx > 0) b.vx *= -BOUNCE; }
-    else          { b.x += dR; if (b.vx < 0) b.vx *= -BOUNCE; }
+  function pileTopLimit() {
+    const webcam = document.querySelector(".webcam-wrap");
+    if (!webcam) return EDGE_PAD;
+    return Math.max(EDGE_PAD, webcam.getBoundingClientRect().top + window.scrollY + 12);
   }
 
-  // 카드끼리 충돌: 위에서 떨어지는 카드는 수직 우선으로 쌓임
-  function resolveCardOnCard(b, o) {
-    const bR = b.x + CARD_W, bB = b.y + CARD_H;
-    const oR = o.x + CARD_W, oB = o.y + CARD_H;
-    if (b.x >= oR || bR <= o.x || b.y >= oB || bB <= o.y) return;
+  function layoutPile(animate = false) {
+    const cards = [...pileStage.querySelectorAll(".post-card")];
+    const stageW = pileStage.clientWidth;
+    const size = cardSize();
+    const minX = EDGE_PAD;
+    const maxX = Math.max(minX, stageW - size.w - EDGE_PAD);
+    const columnGap = 22;
+    const rowStep = size.h + ROW_GAP;
+    const columns = Math.max(1, Math.floor((stageW - EDGE_PAD * 2 + columnGap) / (size.w + columnGap)));
+    const cellW = columns === 1 ? 0 : (maxX - minX) / (columns - 1);
+    const movableCards = cards.filter(card => card.dataset.dragged !== "true");
+    const rowCount = Math.max(1, Math.ceil(movableCards.length / columns));
+    const pileHeight = EDGE_PAD * 2 + rowCount * size.h + Math.max(0, rowCount - 1) * ROW_GAP;
+    const topLimit = pileTopLimit();
+    const captureH = document.querySelector(".capture-section")?.offsetHeight || 0;
+    const draggedMaxBottom = cards.reduce((max, card) => {
+      if (card.dataset.dragged !== "true") return max;
+      const draggedY = parseFloat(card.style.top || card.dataset.y || "0");
+      return Math.max(max, draggedY + size.h + EDGE_PAD);
+    }, 0);
+    const bottomStackHeight = topLimit + EDGE_PAD + size.h + Math.max(0, rowCount - 1) * rowStep + PILE_Y_JITTER;
+    const stageHeight = Math.max(window.innerHeight, captureH, pileHeight, draggedMaxBottom, bottomStackHeight);
 
-    // b의 중심이 o의 중심보다 위 → b가 o 위에 착지하는 상황 → 수직 해결
-    if (b.y + CARD_H * 0.5 < o.y + CARD_H * 0.5) {
-      const dT = bB - o.y;
-      b.y -= dT;
-      if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; }
-      return;
-    }
-    // 그 외(옆에서 닿는 경우): 최소 침투 축
-    resolveStatic(b, { x: o.x, y: o.y, w: CARD_W, h: CARD_H });
-  }
+    pileStage.style.minHeight = `${stageHeight}px`;
+    document.body.style.minHeight = `${stageHeight}px`;
 
-  function physTick() {
-    physRaf = requestAnimationFrame(physTick);
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    let placed = 0;
+    let maxBottom = 0;
 
-    // 캡처 섹션 경계 (매 프레임 최신 위치 반영)
-    let capRect = null;
-    const capEl = document.querySelector(".capture-section");
-    if (capEl) {
-      const r = capEl.getBoundingClientRect();
-      capRect = { x: r.left, y: r.top, w: r.width, h: r.height };
-    }
-
-    // Static world boundaries
-    const statics = [
-      { x: -200,  y: vh,    w: vw + 400, h: 200 },  // floor
-      { x: -200,  y: -9999, w: 200,      h: 99999 }, // left wall
-      { x: vw,    y: -9999, w: 200,      h: 99999 }, // right wall
-    ];
-
-    // Integrate active bodies
-    const active = bodies.filter(b => !b.sleeping && !b.dragging);
-    for (const b of active) {
-      b.vy = Math.min(b.vy + GRAV, MAX_VY);
-      b.vx *= 0.97;  // 수평 공기저항 — 벽 쏠림 방지
-      b.x += b.vx;
-      b.y += b.vy;
-    }
-
-    // Collision passes (4 iterations for stability)
-    for (let pass = 0; pass < 4; pass++) {
-      for (const b of active) {
-        // vs 바닥·벽
-        for (const s of statics) resolveStatic(b, s);
-        // vs 캡처 섹션 (수평 전용)
-        if (capRect) resolveCapture(b, capRect);
-        // vs 다른 카드 (수직 우선 스태킹)
-        for (const o of bodies) {
-          if (o === b || o.dragging) continue;
-          resolveCardOnCard(b, o);
-        }
-      }
-    }
-
-    // Sleep, 뷰포트 경계 클램프, DOM update
-    for (const b of active) {
-      // 한번이라도 화면 안에 들어온 카드는 다시 나가지 못하게
-      if (b.y >= 0) b.inView = true;
-
-      // X: 항상 화면 안
-      if (b.x < 0)          { b.x = 0;          if (b.vx < 0) b.vx = 0; }
-      if (b.x > vw - CARD_W) { b.x = vw - CARD_W; if (b.vx > 0) b.vx = 0; }
-
-      // Y: 위는 진입 후에만 클램프 (스폰 낙하는 허용), 아래는 항상
-      if (b.inView && b.y < 0)          { b.y = 0;          if (b.vy < 0) b.vy = 0; }
-      if (b.y > vh - CARD_H)            { b.y = vh - CARD_H; if (b.vy > 0) { b.vy = -b.vy * BOUNCE; b.vx *= FL_FRIC; } }
-
-      // Sleep
-      if (Math.abs(b.vx) < SLEEP_V && Math.abs(b.vy) < SLEEP_V) {
-        if (++b.still >= SLEEP_N) { b.sleeping = true; b.vx = 0; b.vy = 0; }
-      } else {
-        b.still = 0;
+    cards.forEach((card, i) => {
+      if (card.dataset.dragged === "true") {
+        const draggedY = parseFloat(card.style.top || card.dataset.y || "0");
+        maxBottom = Math.max(maxBottom, draggedY + size.h);
+        return;
       }
 
-      b.el.style.left = b.x.toFixed(1) + "px";
-      b.el.style.top  = b.y.toFixed(1) + "px";
-    }
+      const row = Math.floor(placed / columns);
+      const col = placed % columns;
+      const baseX = columns === 1 ? minX : minX + col * cellW;
+      const xJitter = columns === 1 ? 0 : randomBetween(-cellW * 0.12, cellW * 0.12);
+      const yJitter = randomBetween(0, PILE_Y_JITTER);
+      const x = Math.min(maxX, Math.max(minX, baseX + xJitter));
+      const y = Math.max(topLimit, stageHeight - EDGE_PAD - size.h - row * rowStep - yJitter);
+      placed += 1;
+
+      card.style.left = `${x.toFixed(1)}px`;
+      card.style.top = `${y.toFixed(1)}px`;
+      card.dataset.x = x.toFixed(1);
+      card.dataset.y = y.toFixed(1);
+      maxBottom = Math.max(maxBottom, y + size.h);
+      if (animate && card.dataset.dropped !== "true") {
+        card.style.setProperty("--drop-distance", `calc(-100vh - ${y + size.h}px)`);
+        card.style.animationDelay = `${Math.min(i * 0.09, 0.9)}s`;
+        card.classList.remove("drop-in");
+        void card.offsetWidth;
+        card.classList.add("drop-in");
+        card.dataset.dropped = "true";
+      }
+    });
+
+    const finalStageHeight = Math.max(stageHeight, maxBottom + EDGE_PAD);
+    pileStage.style.minHeight = `${finalStageHeight}px`;
+    document.body.style.minHeight = `${finalStageHeight}px`;
+    clampCardsToStage();
+    syncCardStackOrder();
   }
-  /* --------------------------- */
+
+  function clampCardsToStage() {
+    const size = cardSize();
+    const minY = pileTopLimit();
+    const maxX = Math.max(0, pileStage.clientWidth - size.w);
+    const maxY = Math.max(minY, pileStage.clientHeight - size.h);
+
+    pileStage.querySelectorAll(".post-card").forEach(card => {
+      const x = Math.min(maxX, Math.max(0, parseFloat(card.style.left || "0")));
+      const y = Math.min(maxY, Math.max(minY, parseFloat(card.style.top || "0")));
+      card.style.left = `${x.toFixed(1)}px`;
+      card.style.top = `${y.toFixed(1)}px`;
+      card.dataset.x = x.toFixed(1);
+      card.dataset.y = y.toFixed(1);
+    });
+  }
+
+  function syncCardStackOrder() {
+    const cards = [...pileStage.querySelectorAll(".post-card")];
+    cards.forEach((card, i) => {
+      card.style.zIndex = String(i + 1);
+    });
+    zCounter = cards.length + 1;
+  }
 
   function makeCard(post, z) {
     const card = document.createElement("div");
@@ -1108,6 +1180,13 @@
 
     card.addEventListener("mousedown",  e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); });
     card.addEventListener("touchstart", e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); }, { passive: false });
+    card.addEventListener("animationend", e => {
+      if (e.animationName === "cardDrop") {
+        card.classList.remove("drop-in");
+        card.style.animationDelay = "0s";
+        card.style.transform = `rotate(${card.style.getPropertyValue("--rot")})`;
+      }
+    });
 
     return card;
   }
@@ -1118,59 +1197,58 @@
   function startDrag(e, card) {
     e.preventDefault();
     dragEl = card;
+    card.dataset.dragged = "true";
     card.style.zIndex = ++zCounter;
 
-    const b = bodyGet(card);
-    if (b) { b.dragging = true; b.sleeping = false; b.vx = 0; b.vy = 0; }
-
     const rot = card.style.getPropertyValue("--rot");
+    card.classList.remove("drop-in");
+    card.style.animationDelay = "0s";
     card.style.transform = `rotate(${rot}) scale(1.05)`;
     card.style.filter    = "drop-shadow(0 16px 24px rgba(0,0,0,0.5))";
     card.style.cursor    = "grabbing";
 
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    dragOX = clientX - parseFloat(card.style.left);
-    dragOY = clientY - parseFloat(card.style.top);
+    const stageRect = pileStage.getBoundingClientRect();
+    dragOX = clientX - stageRect.left - parseFloat(card.style.left || "0");
+    dragOY = clientY - stageRect.top - parseFloat(card.style.top || "0");
   }
 
-  let prevDragX = 0, prevDragY = 0;
   function onDragMove(e) {
     if (!dragEl) return;
+    e.preventDefault();
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const nx = clientX - dragOX;
-    const ny = clientY - dragOY;
-    const b  = bodyGet(dragEl);
-    if (b) { b.x = nx; b.y = ny; }
+    const stageRect = pileStage.getBoundingClientRect();
+    const size = cardSize();
+    const minY = pileTopLimit();
+    const maxX = Math.max(0, pileStage.clientWidth - size.w);
+    const maxY = Math.max(minY, pileStage.clientHeight - size.h);
+    const nx = Math.min(maxX, Math.max(0, clientX - stageRect.left - dragOX));
+    const ny = Math.min(maxY, Math.max(minY, clientY - stageRect.top - dragOY));
     dragEl.style.left = nx + "px";
     dragEl.style.top  = ny + "px";
-    prevDragX = clientX;
-    prevDragY = clientY;
+    dragEl.dataset.x = nx.toFixed(1);
+    dragEl.dataset.y = ny.toFixed(1);
   }
 
   function onDragEnd() {
     if (!dragEl) return;
-    const b = bodyGet(dragEl);
-    if (b) {
-      b.dragging = false;
-      b.sleeping = false;
-      b.still    = 0;
-      // Give it a small drop velocity so it falls naturally
-      b.vy = 2;
-      b.vx = 0;
-    }
     const rot = dragEl.style.getPropertyValue("--rot");
     dragEl.style.transform = `rotate(${rot})`;
     dragEl.style.filter    = "none";
     dragEl.style.cursor    = "grab";
     dragEl = null;
+    syncCardStackOrder();
   }
 
   document.addEventListener("mousemove",  onDragMove);
   document.addEventListener("mouseup",    onDragEnd);
   document.addEventListener("touchmove",  onDragMove, { passive: false });
   document.addEventListener("touchend",   onDragEnd);
+  window.addEventListener("resize", () => {
+    layoutPile();
+  });
 
   function escHtml(s) {
     return s
@@ -1188,7 +1266,7 @@
     toastEl.textContent = msg;
     toastEl.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3500);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 3000);
   }
 
   /* ============================================================
