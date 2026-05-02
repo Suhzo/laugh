@@ -895,7 +895,11 @@
       document.querySelectorAll(".post-card").forEach(c => c.remove());
       if (!posts.length) return;
       [...posts].reverse().forEach((p, i) => {
-        setTimeout(() => document.body.appendChild(makeCard(p, i + 1)), i * 350);
+        setTimeout(() => {
+          const card = makeCard(p, i + 1);
+          document.body.appendChild(card);
+          bodyAdd(card);
+        }, i * 350);
       });
       zCounter = posts.length + 1;
     } catch (e) {
@@ -906,7 +910,9 @@
 
 
   function prependCard(post) {
-    document.body.appendChild(makeCard(post, ++zCounter));
+    const card = makeCard(post, ++zCounter);
+    document.body.appendChild(card);
+    bodyAdd(card);
   }
 
   /* ============================================================
@@ -924,10 +930,11 @@
   const bodies = [];
   let physRaf = null;
 
-  function bodyAdd(el, startX) {
+  function bodyAdd(el) {
+    const startX = Math.random() * Math.max(0, window.innerWidth - CARD_W);
     const b = {
       el,
-      x:  Math.max(0, Math.min(window.innerWidth - CARD_W, startX)),
+      x:  startX,
       y:  -CARD_H - Math.random() * 60,
       vx: (Math.random() - 0.5) * 1.2,
       vy: 0.5,
@@ -1056,10 +1063,9 @@
     const card = document.createElement("div");
     card.className = "post-card";
 
-    const rot    = (Math.random() - 0.5) * 16;
-    const startX = Math.random() * Math.max(0, window.innerWidth - CARD_W);
-    const safeZ  = Math.min(z, 8000); // 항상 capture-section(9000) 아래
-    card.style.cssText = `left:-999px;top:-999px;z-index:${safeZ};--rot:${rot.toFixed(1)}deg;transform:rotate(${rot.toFixed(1)}deg);opacity:0;`;
+    const rot  = (Math.random() - 0.5) * 16;
+    const safeZ = Math.min(z, 8000);
+    card.style.cssText = `left:0px;top:-300px;z-index:${safeZ};--rot:${rot.toFixed(1)}deg;transform:rotate(${rot.toFixed(1)}deg);`;
 
     const d  = new Date(post.created_at || Date.now());
     const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -1090,8 +1096,6 @@
     card.addEventListener("mousedown",  e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); });
     card.addEventListener("touchstart", e => { if (!e.target.closest(".delete-btn")) startDrag(e, card); }, { passive: false });
 
-    // Spawn physics body after appended to DOM (caller appends then physics runs)
-    requestAnimationFrame(() => bodyAdd(card, startX));
     return card;
   }
 
